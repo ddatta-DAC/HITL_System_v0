@@ -54,6 +54,10 @@ normalize:
         - 'ShipmentDestination'
         - 'ShipmentDestinationRegion'
       'primary_key_type': 'str' 
+    - 'primary_key': 'HSCode'
+      'columns': 
+        - 'HSCode'
+      'primary_key_type': 'str'
 record_id : 
     name : 'PanjivaRecordID'
     type : 'int'
