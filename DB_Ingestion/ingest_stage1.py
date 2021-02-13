@@ -53,7 +53,7 @@ def process_file(file_path):
     print('HSCode filtered dataframe length >>', len(df))
     
     def process(column_group):
-        print('>>', column_group)
+       
         _redundant_columns = []
         sqlite_conn = sqlite().get_engine()
         table_name = column_group['primary_key']
@@ -70,13 +70,17 @@ def process_file(file_path):
             _df_[primary_key] = _df_[primary_key].astype(column_group['primary_key_type'])
         
         _df_ = _df_.drop_duplicates()
-        
+        if 'filter_values' in column_group.keys():
+            _remove = column_group['filter_values']
+            _df_ = _df_.loc[_df_[primary_key] not in _remove ]
+            
         _df_.to_sql(
             table_name, 
             con=sqlite_conn,
             if_exists='replace',
             index=False
         )
+        
         print('Processed dataframe length >>', column_group, len(_df_))
         _redundant_columns.extend(columns)
         _redundant_columns.remove(primary_key)
@@ -104,7 +108,12 @@ def process_file(file_path):
             normalized_df = normalized_df.dropna(subset=[primary_key])
         else:
             normalized_df.loc[:,primary_key] = normalized_df[primary_key].astype(column_group['primary_key_type'])
+        if 'filter_values' in column_group.keys():
+            _remove = column_group['filter_values']
+            normalized_df = normalized_df.loc[normalized_df[primary_key] not in _remove ]
+            
     sqlite_conn = sqlite().get_engine()
+    print(' Number of records', normalized_df)
     normalized_df.to_sql(
             'Records', 
             con=sqlite_conn,

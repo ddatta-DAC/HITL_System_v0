@@ -58,6 +58,16 @@ normalize:
       'columns': 
         - 'HSCode'
       'primary_key_type': 'str'
+    - 'primary_key': 'Carrier'
+      'columns': 
+        - 'Carrier'
+      'primary_key_type': 'str'
+      'filter_values':
+          - '(Usa))'
+    - 'primary_key': 'ShipmentOrigin'
+      'columns': 
+        - 'ShipmentOrigin'
+      'primary_key_type': 'str'
 record_id : 
     name : 'PanjivaRecordID'
     type : 'int'
