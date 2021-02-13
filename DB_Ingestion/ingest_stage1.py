@@ -47,11 +47,11 @@ def process_file(file_path):
         config = yaml.safe_load(fh) 
     
     df = pd.read_csv(file_path, engine='c', low_memory=False, index_col=None, encoding='utf-8')
-    redundant_columns = []
     df = df.dropna(subset=['HSCode'])
     df['HSCode'] = df['HSCode'].parallel_apply(HSCode_filter_aux)
     df = df.dropna(subset=['HSCode'])
     print('HSCode filtered dataframe length >>', len(df))
+    redundant_columns = []
     
     def process(column_group):
     
@@ -85,13 +85,13 @@ def process_file(file_path):
         print('Processed >>', table_name, len(_df_))
         _redundant_columns.extend(columns)
         _redundant_columns.remove(primary_key)
-        return redundant_columns
+        return _redundant_columns
         
     res = Parallel(n_jobs = 10 ) (delayed(process)(column_group) for column_group in config['normalize'])
     for r in res: 
         redundant_columns.extend(r)
     
-    valid_columns = [_ for _ in list(df.columns) if _ not in redundant_columns]
+    valid_columns = [ _ for _ in list(df.columns) if _ not in redundant_columns]
     normalized_df = df[valid_columns]
 
     record_id = config['record_id']['name']
@@ -133,12 +133,13 @@ def post_process():
     with open('config.yaml','r') as fh:
         config = yaml.safe_load(fh)
     
-    for table_name in  config['normalize']:
-        df = pd.read_sql('select * from {}'.format(table_name), sqlite_conn)
+    for _group in  config['normalize']:
+        table_name = _group['primary_key']
+        df = pd.read_sql("select * from {}".format(table_name), sqlite_conn)
         df = df.drop_duplicates()
-        _key = config['normalize'][table_name]['primary_key']
+        _key = table_name
         # Add in ID column
-        df =  df.sort_values(by=[key])
+        df =  df.sort_values(by=[_key])
         df['ID'] = np.arange(1, df.shape[0]+1)
         df.to_sql(
             table_name, 
@@ -159,7 +160,6 @@ file_list = list(sorted( glob(os.path.join(DATA_LOC,'**.csv'))))
 for file in tqdm(file_list[:5]):
     process_file(file)
 
-    
 # ====================================================
 # Post-process to eliminate duplicates
 # ====================================================
