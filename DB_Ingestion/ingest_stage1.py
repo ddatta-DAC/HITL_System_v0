@@ -5,13 +5,13 @@ from sqlite_engine import sqlite
 from sqlalchemy import create_engine
 import pandas as pd
 from joblib import Parallel,delayed
-
+from sqlalchemy import inspect
 from glob import glob
 import multiprocessing as mp
 from tqdm import tqdm
 from pandarallel import pandarallel
 pandarallel.initialize()
-
+import numpy as np
 
 def _convert_to_int(x):
     try:
@@ -42,6 +42,7 @@ def HSCode_filter_aux(val):
     
     
 def process_file(file_path):
+    
     with open('config.yaml','r') as fh:
         config = yaml.safe_load(fh) 
     
@@ -53,7 +54,7 @@ def process_file(file_path):
     print('HSCode filtered dataframe length >>', len(df))
     
     def process(column_group):
-       
+    
         _redundant_columns = []
         sqlite_conn = sqlite().get_engine()
         table_name = column_group['primary_key']
@@ -72,20 +73,20 @@ def process_file(file_path):
         _df_ = _df_.drop_duplicates()
         if 'filter_values' in column_group.keys():
             _remove = column_group['filter_values']
-            _df_ = _df_.loc[_df_[primary_key] not in _remove ]
+            _df_ = _df_.loc[~_df_[primary_key].isin(_remove) ]
             
         _df_.to_sql(
             table_name, 
             con=sqlite_conn,
-            if_exists='replace',
+            if_exists='append',
             index=False
         )
         
-        print('Processed dataframe length >>', column_group, len(_df_))
+        print('Processed >>', table_name, len(_df_))
         _redundant_columns.extend(columns)
         _redundant_columns.remove(primary_key)
         return redundant_columns
-    
+        
     res = Parallel(n_jobs = 10 ) (delayed(process)(column_group) for column_group in config['normalize'])
     for r in res: 
         redundant_columns.extend(r)
@@ -110,24 +111,57 @@ def process_file(file_path):
             normalized_df.loc[:,primary_key] = normalized_df[primary_key].astype(column_group['primary_key_type'])
         if 'filter_values' in column_group.keys():
             _remove = column_group['filter_values']
-            normalized_df = normalized_df.loc[normalized_df[primary_key] not in _remove ]
+            normalized_df = normalized_df.loc[~normalized_df[primary_key].isin(_remove) ]
             
     sqlite_conn = sqlite().get_engine()
-    print(' Number of records', normalized_df)
+    print(file_path, '||  Number of records', len(normalized_df))
     normalized_df.to_sql(
             'Records', 
             con=sqlite_conn,
-            if_exists='replace',
+            if_exists='append',
             index=False
     )
     return 
 
+
+
+# =================================================================
+
+def post_process():
+    sqlite_conn = sqlite().get_engine()
+    
+    with open('config.yaml','r') as fh:
+        config = yaml.safe_load(fh)
+    
+    for table_name in  config['normalize']:
+        df = pd.read_sql('select * from {}'.format(table_name), sqlite_conn)
+        df = df.drop_duplicates()
+        _key = config['normalize'][table_name]['primary_key']
+        # Add in ID column
+        df =  df.sort_values(by=[key])
+        df['ID'] = np.arange(1, df.shape[0]+1)
+        df.to_sql(
+            table_name, 
+            con=sqlite_conn,
+            if_exists='replace',
+            index=False
+        )
+    return
+
+
+# =================================================================
 with open('config.yaml','r') as fh:
     config = yaml.safe_load(fh)
     
 DATA_LOC = config['file_path']
 file_list = list(sorted( glob(os.path.join(DATA_LOC,'**.csv'))))
-#  Parallel(n_jobs = mp.cpu_count())( delayed(process_file)(file) for file in tqdm(file_list[:5]))
+# Parallel(n_jobs = mp.cpu_count())( delayed(process_file)(file) for file in tqdm(file_list[:5]))
 for file in tqdm(file_list[:5]):
     process_file(file)
+
+    
+# ====================================================
+# Post-process to eliminate duplicates
+# ====================================================
+post_process()
 
