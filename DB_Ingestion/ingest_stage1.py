@@ -157,7 +157,7 @@ with open('config.yaml','r') as fh:
 DATA_LOC = config['file_path']
 file_list = list(sorted( glob(os.path.join(DATA_LOC,'**.csv'))))
 # Parallel(n_jobs = mp.cpu_count())( delayed(process_file)(file) for file in tqdm(file_list[:5]))
-for file in tqdm(file_list[:5]):
+for file in tqdm(file_list[:]):
     process_file(file)
 
 # ====================================================
