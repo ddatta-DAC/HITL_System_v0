@@ -10,10 +10,12 @@ import preprocessUtil
 with open('config.yaml', 'r') as fh:
     config = yaml.safe_load(fh)
 
-OP_DIR = os.path.join( config(['processedData_DIR']), config['subdir'])
+OP_DIR = os.path.join( config['processedData_DIR'], config['subdir'])
+
 with open(os.path.join(OP_DIR, 'epoch_fileList.json'),'r') as fh:
     epoch_fileList = json.load(fh)
-print(epoch_fileList)
+
+    
 
 for epoch,_dict in epoch_fileList.items():
     train_files = _dict['train']

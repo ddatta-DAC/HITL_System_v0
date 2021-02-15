@@ -36,7 +36,7 @@ def set_up_config(__dir__):
     global save_dir
     global column_value_filters
     global num_neg_samples
-
+    global freq_bound_PERCENTILE
     global freq_bound_ABSOLUTE
     global id_col
     global attribute_columns
@@ -55,7 +55,8 @@ def set_up_config(__dir__):
 
     use_cols = CONFIG['use_cols']
 
-    freq_bound_ABSOLUTE = CONFIG['freq_bound_ABSOLUTE']
+    freq_bound_ABSOLUTE = CONFIG['low_freq_bound']
+    freq_bound_PERCENTILE = CONFIG['freq_bound_PERCENTILE']
     column_value_filters = CONFIG['column_value_filters']
 
     _cols = list(use_cols)
@@ -312,21 +313,18 @@ def create_train_test_sets(
     test_files
 ):
     global use_cols
-
     global save_dir
     global column_value_filters
     global CONFIG
-
     global attribute_columns
-
+    
     train_df_file = os.path.join(save_dir, 'train_data.csv')
     test_df_file = os.path.join(save_dir, 'test_data.csv')
-
     column_valuesId_file = 'column_valuesId_dict.pkl'
     column_valuesId_path = os.path.join( save_dir,column_valuesId_file)
 
     # --- Later on - remove using the saved file ---- #
-    if os.path.exists(train_df_file) and os.path.exists(test_df_file):
+    if os.path.exists(train_df_file) and os.path.exists(test_df_file) and False:
         train_df = pd.read_csv(train_df_file)
         test_df = pd.read_csv(test_df_file)
 
@@ -360,8 +358,9 @@ def create_train_test_sets(
         _df_ = _df_1.merge(
             _df_2,
             on = domain,
-            how= 'left'
+            how= 'inner'
         )
+        _df_ = _df_.dropna()
         _df_ = _df_.rename(columns={'ID':'global_entity_ID', domain : 'value'})
         _df_.to_csv(
             os.path.join(save_dir, domain + '.csv'), index=False
