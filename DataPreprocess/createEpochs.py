@@ -5,13 +5,21 @@ from dateutil.relativedelta import relativedelta
 from glob import glob
 import yaml
 import os
+from pathlib import Path
 import json
 
 def setup_timeEpochs():
     with open('config.yaml','r') as fh:
         config = yaml.safe_load(fh)
-        
-    SRC_DATA_LOC = config['SRC_DATA_LOC']
+
+    subdir = config['subdir']
+    SRC_DATA_LOC = config['SRC_DATA_LOC'] + '/' + subdir
+
+    op_loc = config(['processedData_DIR'])
+    Path(op_loc).mkdir(exist_ok=True, parents=True)
+    op_loc = os.path.join( config(['processedData_DIR']), subdir)
+    Path(op_loc).mkdir(exist_ok=True, parents=True)
+
     files = glob(os.path.join(SRC_DATA_LOC,'**.csv'))
     file_dict = {}
   
@@ -48,7 +56,7 @@ def setup_timeEpochs():
             file_dict[epoch_key]['train'] = train
             file_dict[epoch_key]['test'] = test
 
-    with open(config['epoch_fileList'], "w") as outfile:
+    with open(os.path.join(op_loc, config['epoch_fileList']), "w") as outfile:
         json.dump(file_dict, outfile)
     return
 
