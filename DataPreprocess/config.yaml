@@ -18,3 +18,7 @@ epoch_fileList : 'epoch_fileList.json'
     'Carrier':
       - '(Usa))'
   'low_freq_bound': 5
+  data_types:
+    PanjivaRecordID : int
+    ConsigneePanjivaID : int
+    ShipperPanjivaID: int

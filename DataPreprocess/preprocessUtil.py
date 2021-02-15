@@ -14,6 +14,10 @@ pandarallel.initialize()
 import yaml
 from collections import Counter
 import pickle
+sys.path.append('./..')
+sys.path.append('./../..')
+from utils import hscode_filter_util
+
 
 CONFIG = None
 CONFIG_FILE = 'config.yaml'
@@ -23,7 +27,6 @@ use_cols = None
 freq_bound = None
 save_dir = None
 attribute_columns = None
-
 
 def set_up_config(__dir__):
     global CONFIG
@@ -60,6 +63,14 @@ def set_up_config(__dir__):
     attribute_columns = list(sorted(_cols))
     return
 
+def HSCode_cleanup(list_df):
+    new_list = []
+    for _df in list_df:
+        _df['HSCode'] = _df['HSCode'].parallel_apply(hscode_filter_util.HSCode_filter_aux)
+        _df = _df.dropna(subset=['HSCode'])
+        print(' In HSCode clean up , length of dataframe ', len(_df))
+        new_list.append(_df)
+    return new_list
 
 def remove_low_frequency_values(df):
     global id_col
@@ -120,6 +131,12 @@ def apply_value_filters(list_df):
         return list_processed_df
     return list_df
 
+def _convert_to_int(x):
+    try:
+        return int(float(x))
+    except:
+        pass
+
 
 def clean_train_data(
         train_files
@@ -140,6 +157,11 @@ def clean_train_data(
         ) for _file in files
     ]
     list_df = [_.dropna() for _ in list_df]
+
+    # if CONFIG['primary_key_type'] == 'int':
+    #     _df_[primary_key] = _df_[primary_key].apply(_convert_to_int)
+    #     _df_ = _df_.dropna(subset=[primary_key])
+
 
     list_df_1 = apply_value_filters(list_df)
     master_df = None
@@ -168,7 +190,13 @@ def convert_to_ids(
     global id_col
     global freq_bound
     global attribute_columns
+    global CONFIG
     pandarallel.initialize()
+
+    for attr,_type in CONFIG['data_types'].items():
+        if _type == int:
+            df[attr] = df[attr].apply(_convert_to_int)
+            df = df.dropna(subset=[attr])
 
     feature_columns = list(sorted(attribute_columns))
     dict_DomainDims = {}
@@ -243,8 +271,13 @@ def setup_testing_data(
 ):
     global id_col
     global save_dir
+    global CONFIG
     global attribute_columns
     test_df = test_df.dropna()
+    for attr,_type in CONFIG['data_types'].items():
+        if _type == int:
+            df[attr] = df[attr].apply(_convert_to_int)
+            df = df.dropna(subset=[attr])
 
     # Replace with None if ids are not in train_set
     feature_cols = list(attribute_columns)
