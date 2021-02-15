@@ -14,12 +14,11 @@ def setup_timeEpochs():
 
     subdir = config['subdir']
     SRC_DATA_LOC = config['SRC_DATA_LOC'] + '/' + subdir
-
-    op_loc = config(['processedData_DIR'])
+    print(SRC_DATA_LOC)
+    op_loc = config['processedData_DIR']
     Path(op_loc).mkdir(exist_ok=True, parents=True)
-    op_loc = os.path.join( config(['processedData_DIR']), subdir)
+    op_loc = os.path.join( config['processedData_DIR'], subdir)
     Path(op_loc).mkdir(exist_ok=True, parents=True)
-
     files = glob(os.path.join(SRC_DATA_LOC,'**.csv'))
     file_dict = {}
   

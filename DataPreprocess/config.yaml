@@ -1,5 +1,5 @@
-SRC_DATA_LOC : './../Data_Raw/us_import'
-processedData_DIR : 'generated_data_v1'
+SRC_DATA_LOC : './../Data_Raw'
+processedData_DIR : './../generated_data_v1'
 subdir: us_import
 train_period: 6
 test_period: 1
@@ -14,7 +14,8 @@ epoch_fileList : 'epoch_fileList.json'
     - PortOfUnlading
     - PortOfLading
     - HSCode
-  'column_value_filters':
+'column_value_filters':
     'Carrier':
       - '(Usa))'
-  'low_freq_bound': 5
+'low_freq_bound': 5
+'freq_bound_PERCENTILE' : 1
