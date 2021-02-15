@@ -1,4 +1,4 @@
-SRC_DATA_LOC : ''
+SRC_DATA_LOC : './../Data_Raw/us_import'
 train_period: 6
 test_period: 1
 epoch_fileList : 'epoch_fileList.json'
