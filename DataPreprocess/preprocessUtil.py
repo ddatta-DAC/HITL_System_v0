@@ -157,6 +157,7 @@ def clean_train_data(
             low_memory=False
         ) for _file in files
     ]
+    list_df = HSCode_cleanup(list_df)
     list_df = [_.dropna() for _ in list_df]
 
     # if CONFIG['primary_key_type'] == 'int':
@@ -378,6 +379,8 @@ def create_train_test_sets(
         for _file in test_files
     ]
     list_test_df = [_.dropna() for _ in list_test_df]
+    list_test_df = HSCode_cleanup(list_test_df)
+
     test_df = None
     for _df in list_test_df:
         if test_df is None:
