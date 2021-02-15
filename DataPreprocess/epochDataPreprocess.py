@@ -29,6 +29,7 @@ for epoch,_dict in epoch_fileList.items():
         train_files,
         test_files
     )
+    break
 
 
 
