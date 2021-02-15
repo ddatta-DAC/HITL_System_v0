@@ -26,7 +26,6 @@ attribute_columns = None
 
 
 def set_up_config(__dir__):
-
     global CONFIG
     global CONFIG_FILE
     global use_cols
@@ -34,8 +33,7 @@ def set_up_config(__dir__):
     global save_dir
     global column_value_filters
     global num_neg_samples
-    global DIR_LOC
-    global freq_bound_PERCENTILE
+
     global freq_bound_ABSOLUTE
     global id_col
     global attribute_columns
@@ -47,10 +45,7 @@ def set_up_config(__dir__):
 
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-    save_dir = os.path.join(
-        CONFIG['save_dir'],
-        DIR
-    )
+
 
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -129,9 +124,8 @@ def apply_value_filters(list_df):
 def clean_train_data(
         train_files
 ):
-    global DIR
+
     global CONFIG
-    global DIR_LOC
     global attribute_columns
     global use_cols
 
@@ -285,11 +279,11 @@ def create_train_test_sets(
     test_files
 ):
     global use_cols
-    global DIR
+
     global save_dir
     global column_value_filters
     global CONFIG
-    global DIR_LOC
+
     global attribute_columns
 
     train_df_file = os.path.join(save_dir, 'train_data.csv')
