@@ -5,15 +5,12 @@ import sys
 from collections import OrderedDict
 sys.path.append('./../..')
 sys.path.append('./..')
-from .DB_Ingestion.sqlite_engine import  sqlite
+from DB_Ingestion.sqlite_engine import  sqlite
 import glob
 from tqdm import tqdm
 from joblib import Parallel, delayed
 from pandarallel import pandarallel
-import argparse
-
 pandarallel.initialize()
-import re
 import yaml
 from collections import Counter
 import pickle
