@@ -12,34 +12,18 @@ from tqdm import tqdm
 from pandarallel import pandarallel
 pandarallel.initialize()
 import numpy as np
+import os
+import sys
+sys.path.append('./..')
+sys.path.append('./../..')
+from utils import hscode_filter_util
 
 def _convert_to_int(x):
     try:
         return int(float(x))
     except:
         pass
-    
-VALID_HSCODE_LIST = [
-    '9401', '9403', '9201', '9614', '9202', 
-    '9302', '9304', '0305', '8211', '6602', 
-    '8201', '9207', '9504', '9205', '9206',
-    '9209', '9202'
-]
-    
-def HSCode_filter_aux(val):
-    global VALID_HSCODE_LIST
-    
-    val = val.split(';')
-    val = str(val[0])
-    val = val.replace('.', '')
-    val = str(val[:6])
-    if val[:2] == '44':
-        return val
-    elif val[:4] in VALID_HSCODE_LIST:
-        return str(val[:6])
-    else:
-        return None
-    
+
     
 def process_file(file_path):
     
@@ -48,7 +32,11 @@ def process_file(file_path):
     
     df = pd.read_csv(file_path, engine='c', low_memory=False, index_col=None, encoding='utf-8')
     df = df.dropna(subset=['HSCode'])
-    df['HSCode'] = df['HSCode'].parallel_apply(HSCode_filter_aux)
+
+    df['HSCode'] = df['HSCode'].parallel_apply(
+        hscode_filter_util.HSCode_filter_aux
+    )
+
     df = df.dropna(subset=['HSCode'])
     print('HSCode filtered dataframe length >>', len(df))
     redundant_columns = []
