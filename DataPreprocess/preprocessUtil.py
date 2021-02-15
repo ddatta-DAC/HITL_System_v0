@@ -157,13 +157,9 @@ def clean_train_data(
             low_memory=False
         ) for _file in files
     ]
-    list_df = HSCode_cleanup(list_df)
+    
     list_df = [_.dropna() for _ in list_df]
-
-    # if CONFIG['primary_key_type'] == 'int':
-    #     _df_[primary_key] = _df_[primary_key].apply(_convert_to_int)
-    #     _df_ = _df_.dropna(subset=[primary_key])
-
+    list_df = HSCode_cleanup(list_df)
 
     list_df_1 = apply_value_filters(list_df)
     master_df = None
@@ -177,6 +173,7 @@ def clean_train_data(
             )
     master_df = remove_low_frequency_values(master_df)
     print(len(master_df))
+    
     return master_df
 
 def order_cols(df):
@@ -195,10 +192,10 @@ def convert_to_ids(
     global CONFIG
     pandarallel.initialize()
 
-    for attr,_type in CONFIG['data_types'].items():
-        if _type == int:
-            df[attr] = df[attr].apply(_convert_to_int)
-            df = df.dropna(subset=[attr])
+#     for attr,_type in CONFIG['data_types'].items():
+#         if _type == 'int':
+#             df[attr] = df[attr].apply(_convert_to_int)
+#             df = df.dropna(subset=[attr])
 
     feature_columns = list(sorted(attribute_columns))
     dict_DomainDims = {}
@@ -276,10 +273,11 @@ def setup_testing_data(
     global CONFIG
     global attribute_columns
     test_df = test_df.dropna()
+    
     for attr,_type in CONFIG['data_types'].items():
-        if _type == int:
-            df[attr] = df[attr].apply(_convert_to_int)
-            df = df.dropna(subset=[attr])
+        if _type == 'int':
+            test_df[attr] = test_df[attr].apply(_convert_to_int)
+            test_df = test_df.dropna(subset=[attr])
 
     # Replace with None if ids are not in train_set
     feature_cols = list(attribute_columns)
@@ -336,6 +334,12 @@ def create_train_test_sets(
 
     train_df = clean_train_data(train_files)
     train_df = order_cols(train_df)
+    
+    for attr,_type in CONFIG['data_types'].items():
+        if _type == 'int':
+            train_df[attr] = train_df[attr].apply(_convert_to_int)
+            train_df = train_df.dropna(subset=[attr])
+    train_df = order_cols(train_df)
     train_df, col_val2id_dict = convert_to_ids(
         train_df,
         save_dir
@@ -362,6 +366,7 @@ def create_train_test_sets(
             how= 'inner'
         )
         _df_ = _df_.dropna()
+        _df_['ID'] = _df_['ID'].astype(int)
         _df_ = _df_.rename(columns={'ID':'global_entity_ID', domain : 'value'})
         _df_.to_csv(
             os.path.join(save_dir, domain + '.csv'), index=False
