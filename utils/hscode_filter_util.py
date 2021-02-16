@@ -9,15 +9,17 @@ print(VALID_HSCODE_LIST)
 
 def HSCode_filter_aux(val):
     global VALID_HSCODE_LIST
+    val = str(val)
     vals = val.split(';')
-    for val in vals:
-        val = str(val[0])
-        val = val.replace('.', '')
-        val = str(val[:6])
-        if val[:2] == '44':
-            return val
-        elif val in VALID_HSCODE_LIST:
-            return val
+
+    for _val in vals:
+        _val = str(_val)
+        _val = _val.replace('.', '')
+        _val = str(_val[:6])
+        if _val[:2] == '44':
+            return _val
+        elif _val in VALID_HSCODE_LIST:
+            return _val
         else:
             continue
 
