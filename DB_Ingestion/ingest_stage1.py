@@ -123,8 +123,8 @@ def post_process():
     
     for _group in  config['normalize']:
         table_name = _group['primary_key']
-        df = pd.read_sql("select * from {}".format(table_name), sqlite_conn)
-        df = df.drop_duplicates()
+        df = pd.read_sql("select * from {}".format(table_name), sqlite_conn, index_col=None)
+        df = df.drop_duplicates(subset=[table_name])
         _key = table_name
         # Add in ID column
         df =  df.sort_values(by=[_key])
