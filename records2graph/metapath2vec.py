@@ -19,10 +19,10 @@ import pandas as pd
 import numpy as np
 from torch import FloatTensor as FT
 from torch import LongTensor as LT
-import multiprocessing as mp
+import multiprocessing as MP
 import dgl
-
-cpu_count = mp.cpu_count()
+from joblib import Parallel,delayed
+cpu_count = MP.cpu_count()
 print('CPU count', cpu_count)
 
 # -----------------------------------------------------------
@@ -36,7 +36,7 @@ MODEL_SAVE_DATA_LOC = None
 # -----------------------------------------------------------
 def read_graph_data(subDIR):
     global DATA_LOC
-    loc = os.path.join(DATA_LOC, subDIR)
+    loc = os.path.join(DATA_LOC, subDIR, 'stage_graph')
 
     fname_e = 'edges.csv'
     fname_n = 'nodes.csv'
@@ -80,30 +80,31 @@ class loss_callback(CallbackAny2Vec):
 
     def __init__(self):
         self.epoch = 0
-        self.loss_to_be_subed = 0
-
+        self.cumu_loss = 0
+        self.losses = []
+        
     def on_epoch_end(self, model):
         loss = model.get_latest_training_loss()
-        loss_now = loss - self.loss_to_be_subed
-        self.loss_to_be_subed = loss
-        print('Loss after epoch {}: {}'.format(self.epoch, loss_now))
+        self.cumu_loss += float(loss)
+        print('Loss after epoch {}: {:.3f}'.format(self.epoch, loss))
         self.epoch += 1
-
+        self.losses.append(float(loss))
+        model.running_training_loss = 0.0
 
 # -----------------------------------------------------------
 # Metapath 2 vec
 # -----------------------------------------------------------
 
 def mp2vec(random_walks, epochs=100):
-    cpu_count = mp.cpu_count()
-
+    
     model = Word2Vec(
         random_walks,
         size=128,
         window=3,
         negative=10,
-        hs=1,
+        hs=0,
         min_count=1,
+        alpha=0.01,
         iter=epochs,
         compute_loss=True,
         null_word='-1',
@@ -154,20 +155,16 @@ def get_RW_list(graph_obj, metapaths):
         return prefix + '_' + str(val)
 
     for ntype, mp in zip(start_node_types, metapaths):
-        #         print(ntype, graph_obj.nodes(ntype).shape)
         RW_mp = dgl.sampling.random_walk(
             graph_obj,
             metapath=mp,
             nodes=graph_obj.nodes(ntype),
             prob='weight'
         )
-        #         print(ntype, mp)
         _random_walks = RW_mp[0].data.numpy()
-        #         print(_random_walks[0])
 
         pattern = RW_mp[1].data.numpy().tolist()
         pattern = [node_typeID2typename[_] for _ in pattern]
-        #         print(' > ', pattern)
         vectorized_func = np.vectorize(add_prefix)
         _random_walks = vectorized_func(pattern, _random_walks)
 
@@ -222,7 +219,7 @@ def main(
 ):
     global matapath2vec_epochs
     global MODEL_SAVE_DATA_LOC
-
+    print('>>>', subDIR)
     MODEL_SAVE_DATA_LOC = os.path.join('saved_model_data', subDIR)
     path_obj = Path(MODEL_SAVE_DATA_LOC)
     path_obj.mkdir(exist_ok=True, parents=True)
@@ -235,13 +232,15 @@ def main(
         graph_obj[e_type].edata['weight'] = FT(edge_weights[e_type])
 
     print('Node types, edge types', graph_obj.ntypes, graph_obj.etypes)
-    print('Graph ::', graph_obj)
+#     print('Graph ::', graph_obj)
 
     print('Graph dgl device', graph_obj.device)
     metapaths = get_mp_list(graph_obj, multiplier=5)
     random_walks = get_RW_list(graph_obj, metapaths)
     mp2vec_model = mp2vec(random_walks, epochs=matapath2vec_epochs)
-    mp2vec_model.save(os.path.join(MODEL_SAVE_DATA_LOC, "mp2vec.model"))
+    print('[Model trained.]')
+    print('>>', MODEL_SAVE_DATA_LOC)
+#     mp2vec_model.save(os.path.join(MODEL_SAVE_DATA_LOC, "mp2vec.model"))
     node_vectors = extract_feature_vectors(mp2vec_model)
     save_vectors(node_vectors)
     return
@@ -257,6 +256,7 @@ matapath2vec_epochs = int(config['mp2v_epochs'])
 with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
     epoch_fileList = json.load(fh)
 
-subDIR_list = list(epoch_fileList.keys())
-for subDIR in subDIR_list:
-    main(subDIR)
+subDIR_list = sorted(list(epoch_fileList.keys()))
+
+Parallel(n_jobs = MP.cpu_count())(delayed(main)(subDIR) for subDIR in subDIR_list)
+

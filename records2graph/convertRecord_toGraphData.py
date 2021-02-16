@@ -93,6 +93,7 @@ DATA_LOC = config['DATA_LOC']
 with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
     epoch_fileList = json.load(fh)
 
-subDIR_list = list(epoch_fileList.keys())
+subDIR_list = list(sorted(epoch_fileList.keys()))
 for subDIR in subDIR_list:
     main(DATA_LOC, subDIR)
+    
