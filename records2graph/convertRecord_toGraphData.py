@@ -1,9 +1,11 @@
 import pandas as pd
 import sys
-sys.path.append('./..')
-sys.path.append('./../..')
 from pathlib import Path
 import os
+import yaml
+import json
+sys.path.append('./..')
+sys.path.append('./../..')
 try:
     from utils import utils
 except:
@@ -24,20 +26,21 @@ def main(
     # ---------------------------------------
     # This data is already serialized
     # ---------------------------------------
-    data_df = pd.read_csv(os.path.join(DATA_LOC, subDIR,  'train_data.csv'), index_col=None, low_memory=False)
+    data_df = pd.read_csv(
+        os.path.join(DATA_LOC, subDIR, 'train_data.csv'),
+        index_col=None,
+        low_memory=False
+    )
     data_df = data_df.drop_duplicates(subset=list(domain_dims.keys()))
 
     # ------------------------------
     # Create graph ingestible data
     # ------------------------------
 
-    ID_COL = 'PanjivRecordID'
-    node_types = sorted(domain_dims.keys())
-
     utils.convert_to_serializedID_format(
         data_df,
         DIR=subDIR,
-        data_source_loc = DATA_LOC
+        data_source_loc=DATA_LOC
     )
 
     with open('./valid_edges.txt', 'r') as fh:
@@ -52,7 +55,6 @@ def main(
         return df_grouped
 
     list_edge_df = Parallel(mp.cpu_count())(delayed(get_edge_list)(data_df, e) for e in valid_edge_types)
-    sum([len(_) for _ in list_edge_df])
 
     edges_df = None
     for _df in list_edge_df:
@@ -62,21 +64,35 @@ def main(
             edges_df = pd.DataFrame(_df)
 
     nodes_df = pd.DataFrame(columns=['ID', 'n_type'])
-    idMapping_df = utils.fetch_idMappingFile(DIR=subDIR, parent_dir = DATA_LOC)
+    idMapping_df = utils.fetch_idMappingFile(DIR=subDIR, parent_dir=DATA_LOC)
 
     for domain in domain_dims.keys():
         tmp = pd.DataFrame(idMapping_df.loc[idMapping_df['domain'] == domain]['serial_id'])
         tmp = tmp.rename(columns={'serial_id': 'ID'})
         tmp['n_type'] = domain
         nodes_df = nodes_df.append(tmp, ignore_index=True)
+
     print('Number of nodes :: ', len(nodes_df), 'Number of edges ::', len(edges_df))
 
     # --------------------------
     # Save files
     # --------------------------
     SAVE_DIR = os.path.join(DATA_LOC, subDIR, 'stage_graph')
-    pathobj = Path(SAVE_DIR)
-    pathobj.mkdir(exist_ok=True, parents=True)
+    path_obj = Path(SAVE_DIR)
+    path_obj.mkdir(exist_ok=True, parents=True)
     edges_df.to_csv(os.path.join(SAVE_DIR, 'edges.csv'), index=False)
     nodes_df.to_csv(os.path.join(SAVE_DIR, 'nodes.csv'), index=False)
+    return
 
+# ----------------
+with open('config.yaml', 'r') as fh:
+    config = yaml.safe_load(fh)
+
+DATA_LOC = config['DATA_LOC']
+
+with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
+    epoch_fileList = json.load(fh)
+
+subDIR_list = list(epoch_fileList.keys())
+for subDIR in subDIR_list:
+    main(DATA_LOC, subDIR)

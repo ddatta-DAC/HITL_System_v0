@@ -1,64 +1,27 @@
-import dgl
-import torch as th
 import sys
 import os
 
 sys.path.append('./..')
+sys.path.append('./../..')
 import pandas as pd
-import numpy as np
+import json
 from pandarallel import pandarallel
-
 pandarallel.initialize()
 from dgl.data.utils import save_graphs
-import pickle
-from dgl.data.utils import load_graphs
-from torch import nn
-from torch.nn import functional as F
-from torch import FloatTensor as FT
-from torch import LongTensor as LT
-import torch
-import dgl.function as fn
-from torch import FloatTensor as FT
-from torch import LongTensor as LT
-from tqdm import tqdm
-import glob
+import yaml
 from pathlib import Path
 from operator import itemgetter
-import argparse
-
 from gensim.models import KeyedVectors
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
-import multiprocessing as mp
-import torch as th
-import sys
-import os
-import pickle
 from dgl.data.utils import load_graphs
-from torch import nn
-from torch.nn import functional as F
-import torch
-import dgl.function as fn
-
-sys.path.append('./..')
 import pandas as pd
 import numpy as np
-from pandarallel import pandarallel
-
-pandarallel.initialize()
-from dgl.data.utils import save_graphs
 from torch import FloatTensor as FT
 from torch import LongTensor as LT
-from tqdm import tqdm
-import glob
-from pathlib import Path
-from operator import itemgetter
-import argparse
-from gensim.models import KeyedVectors
-from gensim.models import Word2Vec
-from gensim.models.callbacks import CallbackAny2Vec
 import multiprocessing as mp
 import dgl
+
 cpu_count = mp.cpu_count()
 print('CPU count', cpu_count)
 
@@ -66,19 +29,15 @@ print('CPU count', cpu_count)
 # ----------------------------GLOBALS-------------------------
 # -----------------------------------------------------------
 MODEL_SAVE_DATA_LOC = None
-DIR = None
-W2V_EPOCHS = 100
-MODEL_SAVE_DATA_LOC = None
-SOURCE_DATA_LOC = './../generated_data_v1/{{}}/stage_graph'
-
 
 # -----------------------------------------------------------
 # Read in data.
 # data created by  convertRecord_toGraphData
 # -----------------------------------------------------------
-def read_graph_data(DIR):
-    global SOURCE_DATA_LOC
-    loc = SOURCE_DATA_LOC.replace('{{}}', DIR)
+def read_graph_data(subDIR):
+    global DATA_LOC
+    loc = os.path.join(DATA_LOC, subDIR)
+
     fname_e = 'edges.csv'
     fname_n = 'nodes.csv'
 
@@ -116,7 +75,6 @@ def read_graph_data(DIR):
     return graph_data, edge_weights
 
 
-
 class loss_callback(CallbackAny2Vec):
     '''Callback to print loss after each epoch.'''
 
@@ -138,12 +96,13 @@ class loss_callback(CallbackAny2Vec):
 
 def mp2vec(random_walks, epochs=100):
     cpu_count = mp.cpu_count()
+
     model = Word2Vec(
         random_walks,
         size=128,
         window=3,
         negative=10,
-        hs=0,
+        hs=1,
         min_count=1,
         iter=epochs,
         compute_loss=True,
@@ -239,15 +198,12 @@ def extract_feature_vectors(w2v_model):
 
 
 def save_vectors(node_vectors):
-    global DIR
     global MODEL_SAVE_DATA_LOC
     for n_type, _dict in node_vectors.items():
         # sort the vectors by id
         arr_vec = []
 
         arr_vec = [_[1] for _ in sorted(_dict.items(), key=itemgetter(0))]
-        #         for n_id in sorted(_dict.keys()):
-        #             arr_vec.append(_dict[n_id])
         arr_vec = np.array(arr_vec)
         fname = 'mp2v_{}.npy'.format(n_type)
         fname = os.path.join(MODEL_SAVE_DATA_LOC, fname)
@@ -261,16 +217,17 @@ def save_vectors(node_vectors):
     return graph_data, edge_weights
 
 
-def main():
-    global DIR
-    global W2V_EPOCHS
+def main(
+        subDIR
+):
+    global matapath2vec_epochs
     global MODEL_SAVE_DATA_LOC
 
-    MODEL_SAVE_DATA_LOC = os.path.join('saved_model_data', DIR)
+    MODEL_SAVE_DATA_LOC = os.path.join('saved_model_data', subDIR)
     path_obj = Path(MODEL_SAVE_DATA_LOC)
     path_obj.mkdir(exist_ok=True, parents=True)
 
-    graph_data, edge_weights = read_graph_data(DIR)
+    graph_data, edge_weights = read_graph_data(subDIR)
     graph_obj = dgl.heterograph(graph_data)
     print('Node types, edge types', graph_obj.ntypes, graph_obj.etypes)
     print('Graph ::', graph_obj)
@@ -281,32 +238,25 @@ def main():
     print('Graph ::', graph_obj)
 
     print('Graph dgl device', graph_obj.device)
-    # DEBUG
-    # print(graph_obj['HSCode_ShipmentOrigin'].edata)
-    # print(graph_obj['HSCode_ShipmentOrigin'].edges())
-
     metapaths = get_mp_list(graph_obj, multiplier=5)
     random_walks = get_RW_list(graph_obj, metapaths)
-    mp2vec_model = mp2vec(random_walks, epochs=W2V_EPOCHS)
+    mp2vec_model = mp2vec(random_walks, epochs=matapath2vec_epochs)
     mp2vec_model.save(os.path.join(MODEL_SAVE_DATA_LOC, "mp2vec.model"))
     node_vectors = extract_feature_vectors(mp2vec_model)
     save_vectors(node_vectors)
     return
 
+
 # ============================================= #
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--DIR', choices=['us_import1', 'us_import2', 'us_import3','us_import4', 'us_import5', 'us_import6'],
-    default=None
-)
-parser.add_argument(
-    '--W2V_EPOCHS',
-    default=250,
-    type=int
-)
 
-args = parser.parse_args()
-DIR = args.DIR
-W2V_EPOCHS = args.W2V_EPOCHS
-main()
+with open('config.yaml', 'r') as fh:
+    config = yaml.safe_load(fh)
+DATA_LOC = config['DATA_LOC']
+matapath2vec_epochs = int(config['mp2v_epochs'])
+with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
+    epoch_fileList = json.load(fh)
+
+subDIR_list = list(epoch_fileList.keys())
+for subDIR in subDIR_list:
+    main(subDIR)

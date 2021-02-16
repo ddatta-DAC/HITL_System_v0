@@ -1,21 +1,27 @@
-VALID_HSCODE_LIST = [
-    '9401', '9403', '9201', '9614', '9202',
-    '9302', '9304', '0305', '8211', '6602',
-    '8201', '9207', '9504', '9205', '9206',
-    '9209', '9202'
-]
+import os
+import sys
+VALID_HSCODE_LIST = []
+with open('./../DomainData/valid_HSCode.txt','r') as fh:
+    VALID_HSCODE_LIST = fh.readlines()
+VALID_HSCODE_LIST = [_.strip('\n') for _ in VALID_HSCODE_LIST]
 
+print(VALID_HSCODE_LIST)
 
 def HSCode_filter_aux(val):
     global VALID_HSCODE_LIST
+    val = str(val)
+    vals = val.split(';')
 
-    val = val.split(';')
-    val = str(val[0])
-    val = val.replace('.', '')
-    val = str(val[:6])
-    if val[:2] == '44':
-        return val
-    elif val[:4] in VALID_HSCODE_LIST:
-        return str(val[:6])
-    else:
-        return None
+    for _val in vals:
+        _val = str(_val)
+        _val = _val.replace('.', '')
+        _val = str(_val[:6])
+        if _val[:2] == '44':
+            return _val
+        elif _val in VALID_HSCODE_LIST:
+            return _val
+        else:
+            continue
+
+    return None
+
