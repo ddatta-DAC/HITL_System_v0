@@ -29,8 +29,6 @@ print('CPU count', cpu_count)
 # ----------------------------GLOBALS-------------------------
 # -----------------------------------------------------------
 MODEL_SAVE_DATA_LOC = None
-DIR = None
-MODEL_SAVE_DATA_LOC = None
 
 # -----------------------------------------------------------
 # Read in data.
@@ -200,15 +198,12 @@ def extract_feature_vectors(w2v_model):
 
 
 def save_vectors(node_vectors):
-    global DIR
     global MODEL_SAVE_DATA_LOC
     for n_type, _dict in node_vectors.items():
         # sort the vectors by id
         arr_vec = []
 
         arr_vec = [_[1] for _ in sorted(_dict.items(), key=itemgetter(0))]
-        #         for n_id in sorted(_dict.keys()):
-        #             arr_vec.append(_dict[n_id])
         arr_vec = np.array(arr_vec)
         fname = 'mp2v_{}.npy'.format(n_type)
         fname = os.path.join(MODEL_SAVE_DATA_LOC, fname)
