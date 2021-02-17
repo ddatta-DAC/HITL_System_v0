@@ -24,19 +24,19 @@ import yaml
 
 # ===================================== #
 
-def get_domain_dims():
+def get_domain_dims(subDIR):
     global DATA_LOC
-    global DIR
-    with open( os.path.join(DATA_LOC,'{}/domain_dims.pkl'.format(DIR)), 'rb')  as fh:
+    
+    with open( os.path.join(DATA_LOC,'{}/domain_dims.pkl'.format(subDIR)), 'rb')  as fh:
         domain_dims = pickle.load(fh)
     return domain_dims
 
 
-def get_training_data():
+def get_training_data(subDIR):
     global DATA_LOC
-    global DIR
-    x_pos = np.load(os.path.join(DATA_LOC,'{}/stage_2/train_x_pos.npy'.format(DIR)))
-    x_neg = np.load(os.path.join(DATA_LOC,'{}/stage_2/train_x_neg.npy'.format(DIR)))
+    
+    x_pos = np.load(os.path.join(DATA_LOC,'{}/stage_2/train_x_pos.npy'.format(subDIR)))
+    x_neg = np.load(os.path.join(DATA_LOC,'{}/stage_2/train_x_neg.npy'.format(subDIR)))
     return x_pos, x_neg
 
 
@@ -50,14 +50,14 @@ def main(
         epochs=None,
         error_tol=0.01
 ):
-
+    global DATA_LOC
     saved_model_dir = 'saved_model'
     path_obj = Path(saved_model_dir)
     path_obj.mkdir( parents=True, exist_ok=True)
 
-    x_pos, x_neg = get_training_data()
+    x_pos, x_neg = get_training_data(subDIR)
     x_neg = x_neg.reshape([x_pos.shape[0], -1, x_pos.shape[1]])
-    domain_dims = get_domain_dims()
+    domain_dims = get_domain_dims(subDIR)
     total_entity_count = sum(domain_dims.values())
     model = AD.AD_model_container(total_entity_count, emb_dim=emb_dim, device=device, lr= lr)
     model.train_model(x_pos, x_neg, batch_size=batch_size, epochs=epochs, tol = error_tol)
