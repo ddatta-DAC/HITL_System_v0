@@ -2,7 +2,8 @@ import redis
 import pickle
 import os
 import pandas as pd
-
+from pandarallel import pandarallel
+pandarallel.initialize()
 try:
     os.system("redis-server --port 6666 &")
 except:
@@ -12,7 +13,11 @@ except:
 class redisStore:
     redis_conn = redis.Redis(host='localhost', port=6666, db=0)
 
-    def __init__(self, DATA_LOC, subDIR):
+    def __init__(self, DATA_LOC=None, subDIR=None):
+        
+        if DATA_LOC is None or subDIR is None:
+            return 
+        
         redisStore.ingest_data(
             DATA_LOC,
             subDIR
@@ -39,10 +44,10 @@ class redisStore:
         def aux_store(row):
             ID_COL = 'PanjivaRecordID'
             _dict = pickle.dumps(row.to_dict())
-            key = str(int(_dict[ID_COL]))
+            key = str(int(row[ID_COL]))
             redisStore.redis_conn.set(key, _dict)
 
-        df.apply(aux_store, axis=1)
+        df.parallel_apply(aux_store, axis=1)
         return
 
     @staticmethod
@@ -54,7 +59,9 @@ class redisStore:
         return _dict
 
 
-redisStore(
-    DATA_LOC='./../generated_data',
-    subDIR='01_2016'
-)
+# redisStore(
+#     DATA_LOC='./../generated_data_v1/us_import',
+#     subDIR='01_2016'
+# )
+# engine =  redisStore()
+# print(engine.fetch_data(key='121983692'))
