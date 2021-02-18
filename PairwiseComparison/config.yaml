@@ -1,0 +1,7 @@
+DATA_LOC: './../generated_data_v1/us_import'
+saved_model_dir : '../AD_model/MEAD/saved_model'
+emb_save_dir : './emb_save_dir'
+op_save_dir : './pairWiseDist'
+
+
+
