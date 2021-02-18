@@ -1,6 +1,5 @@
 import os
 import torch
-import argparse
 import pandas as pd
 import numpy as np
 import json
@@ -9,7 +8,6 @@ try:
 except:
     import model_AD_1 as AD
 import pickle
-import matplotlib.pyplot as plt
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from pathlib import Path
