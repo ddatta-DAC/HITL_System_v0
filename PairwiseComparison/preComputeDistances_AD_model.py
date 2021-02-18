@@ -21,10 +21,12 @@ from utils import utils
 
 SQL_conn = sqlite().get_engine()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 idMapping_df = None
 config = None
 ID_COL = 'PanjivaRecordID'
-
+mapping_dict  = None
+op_save_dir = None
 
 def get_domain_dims(
         subDIR
@@ -37,18 +39,22 @@ def get_domain_dims(
 
 def setup_up(subDIR):
     global config
-    global OUTPUT_DIR
     global saved_model_dir
     global idMapping_df
-    pathobj = Path(OUTPUT_DIR)
-    pathobj.mkdir(exist_ok=True, parents=True)
-    pathobj = Path(os.path.join(OUTPUT_DIR, subDIR))
-    pathobj.mkdir(exist_ok=True, parents=True)
+    global emb_save_dir
+    global mapping_dict
+    global op_save_dir
+    emb_save_dir = config['emb_save_dir']
+    Path(emb_save_dir).mkdir(exist_ok=True, parents=True)
+    Path(os.path.join(emb_save_dir,subDIR)).mkdir(exist_ok=True, parents=True)
+    
     idMapping_df = pd.read_csv(
         os.path.join(DATA_LOC, subDIR, 'idMapping.csv'),
         index_col=None
     )
     op_save_dir = config['op_save_dir']
+    Path(op_save_dir).mkdir(exist_ok=True, parents=True)
+    Path(os.path.join(op_save_dir,subDIR)).mkdir(exist_ok=True, parents=True)
     mapping_dict = {}
 
     for domain in set(idMapping_df['domain']):
@@ -56,7 +62,7 @@ def setup_up(subDIR):
         serial_id = tmp['serial_id'].values.tolist()
         entity_id = tmp['entity_id'].values.tolist()
         mapping_dict[domain] = {
-            k: v for k, v in zip(serial_id, entity_id)
+            k:v for k, v in zip(serial_id, entity_id)
         }
     return
 
@@ -92,19 +98,33 @@ def get_pairwise_dist(subDIR):
     df = df_train.append(df_test, ignore_index=True)
     del df[ID_COL]
     df = df.drop_duplicates()
+    df = utils.convert_to_serializedID_format(
+        df,
+        subDIR,
+        data_source_loc=DATA_LOC
+    )
+    
     domain_dims = get_domain_dims(subDIR)
 
     emb_file_list = glob.glob(os.path.join(emb_save_dir, subDIR, '**.npy'))
     emb_list = [np.load(_) for _ in emb_file_list]
-
+   
     def aux_find_dist(row, dom1, dom2, emb_arr):
-        return cosine(emb_arr[row[dom1]], emb_arr[row[dom2]])
-
+        return cosine(
+            emb_arr[int(row[dom1])], 
+            emb_arr[int(row[dom2])]
+        )
+    
+    for col in list(df.columns):
+        df[col] = df[col].astype(int)
+            
     for item in combinations(list(domain_dims.keys()), 2):
         item = list(sorted(item))
-        _df_ = df[item].drop_duplicates()
-        emb = np.zeros()
+        _df_ = df[item].copy()
+        _df_ = _df_.drop_duplicates()
+            
         dist_cols = []
+        
         for emb in emb_list:
             d_col = 'dist_{}'.format(emb.shape[1])
             dist_cols.append(d_col)
@@ -118,7 +138,7 @@ def get_pairwise_dist(subDIR):
             lambda _row: np.mean([_row[_] for _ in dist_cols]),
             axis=1
         )
-        _df_ = _df_[item[0], item[1], 'dist']
+        _df_ = _df_[[item[0], item[1], 'dist']]
         _df_unserialized = convert_from_serialized(
             _df_
         )
@@ -151,7 +171,6 @@ def precompute_distances(
     # Find the models trained for the current epoch
     # ----
     trained_model_list = glob.glob(os.path.join(saved_model_dir, subDIR, 'model_**'))
-    emb_save_dir = ''
     emb_obj_list = []
     for model_path in trained_model_list:
         emb_dim = int(os.path.split(model_path)[-1].split('_')[1])
@@ -161,7 +180,7 @@ def precompute_distances(
             entity_count=entity_count
         )
         model_container_obj.load_model(model_path)
-        emb = model_container_obj.model.emb.cpu().data.numpy()
+        emb = model_container_obj.model.emb.weight.cpu().data.numpy()
         path = os.path.join(emb_save_dir, subDIR)
         pathobj = Path(path)
         pathobj.mkdir(exist_ok=True, parents=True)
@@ -170,7 +189,7 @@ def precompute_distances(
             os.path.join(path, fname), emb
         )
         emb_obj_list.append(emb)
-
+    get_pairwise_dist(subDIR)
     # ------------------------------
 
     return
@@ -178,7 +197,7 @@ def precompute_distances(
 
 # =============================================================
 
-with open('ensemble_config.yaml', 'r') as fh:
+with open('config.yaml', 'r') as fh:
     config = yaml.safe_load(fh)
 
 DATA_LOC = config['DATA_LOC']
@@ -192,3 +211,5 @@ subDIR_list = sorted(list(epoch_fileList.keys()))
 for subDIR in tqdm(subDIR_list):
     setup_up(subDIR)
     precompute_distances(subDIR)
+
+    
