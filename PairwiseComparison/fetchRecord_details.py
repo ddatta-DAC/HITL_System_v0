@@ -19,14 +19,9 @@ from scipy.spatial.distance import cosine
 import pickle
 from itertools import combinations
 from pathlib import Path
-import numpy as np
-
-sys.path.append('./..')
-from AD_model.MEAD.model_AD_1 import AD_model_container
-from DB_Ingestion.sqlite_engine import sqlite
+from redisStore import setup_Redis
 from utils import utils
 
-SQL_conn = sqlite().get_engine()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 idMapping_df = None
@@ -34,7 +29,7 @@ config = None
 ID_COL = 'PanjivaRecordID'
 mapping_dict = None
 op_save_dir = None
-
+redis_obj = None
 
 def get_domain_dims(
         subDIR
@@ -52,6 +47,18 @@ def setup_up(subDIR):
     global emb_save_dir
     global mapping_dict
     global op_save_dir
+    global DATA_LOC
+    global redis_obj
+    redis_obj = setup_Redis.redisStore(
+        DATA_LOC=DATA_LOC,
+        subDIR=subDIR
+    )
+
+    redis_obj.ingest_pairWiseDist(
+        data_dir='./../PairwiseComparison/pairWiseDist',
+        subDIR=subDIR
+    )
+
     emb_save_dir = config['emb_save_dir']
     Path(emb_save_dir).mkdir(exist_ok=True, parents=True)
     Path(os.path.join(emb_save_dir, subDIR)).mkdir(exist_ok=True, parents=True)
@@ -72,7 +79,6 @@ def setup_up(subDIR):
         mapping_dict[domain] = {
             k: v for k, v in zip(serial_id, entity_id)
         }
-
     return
 # =============================
 # Front end facing method
@@ -80,16 +86,28 @@ def setup_up(subDIR):
 # id :: PanjivaRecordID
 # while this id is global ;
 # =============================
-
 def fetchRecord_details(
         id = None,
         subDIR = None,
         emb_source = 'AD'
 ):
-    global SQL_conn
 
+    global redis_obj
+    global ID_COL
+    record_dict = redis_obj.fetch(key=str(int(id)))
+    domain_dims = get_domain_dims(subDIR)
+    result = []
 
+    for pair in combinations(list(domain_dims.keys())):
+        d1,d2 = pair[0],pair[1]
+        e1 = record_dict[d1]
+        e2 = record_dict[d2]
+        key = 'pairWiseD_{}_{}_{}'.format(emb_source,d1,e1,d2,e2)
+        r = redis_obj.fetch(key)
+        result.append(({d1:e1}, {d2:e2}, r))
+    return result
 
-
-    return
-
+fetchRecord_details(
+    id = 121983692,
+    subDIR='01_2016'
+)
