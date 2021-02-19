@@ -39,10 +39,13 @@ def get_domain_dims(
         domain_dims = pickle.load(fh)
     return domain_dims
 
-
+# ===========================
+# data_dir : where all the base data is stored
+# pairWiseDist_data_dir:  where pairwise proximities are stored
+# ============================
 def initialize(
     data_dir, 
-    pairWiseSist_data_dir
+    pairWiseDist_data_dir,
     subDIR
 ):
     global config
@@ -62,11 +65,10 @@ def initialize(
     )
     
     redis_obj.ingest_pairWiseDist(
-        data_dir= pairWiseSist_data_dir ,
-        subDIR=subDIR
+        data_dir = pairWiseDist_data_dir ,
+        subDIR = subDIR
     )
     
-    return
 
 
 # =============================
