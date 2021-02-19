@@ -5,22 +5,28 @@ import pandas as pd
 import glob
 from pandarallel import pandarallel
 pandarallel.initialize()
+DATA_STORED = False
 try:
     os.system("redis-server --port 6666 &")
 except:
     print('[INFO] Redis server already running')
+    DATA_STORED = False
+
 
 class redisStore:
     redis_conn = redis.Redis(host='localhost', port=6666, db=0)
 
     def __init__(self, DATA_LOC=None, subDIR=None):
+        global DATA_STORED
         if DATA_LOC is None or subDIR is None:
             return 
+        if not DATA_STORED:
+            redisStore.ingest_data(
+                DATA_LOC,
+                subDIR
+            )
         
-        redisStore.ingest_data(
-            DATA_LOC,
-            subDIR
-        )
+        DATA_STORED = True
         return
 
     @staticmethod
@@ -64,26 +70,34 @@ class redisStore:
 
         def aux_store2(row , domain1, domain2):
             _dict = pickle.dumps(row.to_dict())
-            key = 'pairWiseD_{}_{}_{}'.format(emb_source, domain1, row[domain1], domain1, row[domain2])
-            redisStore.redis_conn.set(key, _dict['percentile'])
+            key = 'pairWiseD_{}_{}_{}_{}_{}'.format(emb_source, domain1, int(row[domain1]), domain2, int(row[domain2]))
+#             print('>>>', key, str(row['percentile']))
+            redisStore.redis_conn.set(key, str(row['percentile']))
+            return 
 
         for file in files:
             _df = pd.read_csv(file, index_col=None)
             # Calculate the percentile values
-            domain1, domain2 = file.split('.')[0].split('_')[1:3]
+            fname = os.path.split(file)[-1].split('.')[0]
+            domain1, domain2 = fname.split('_')[1:3]
             values = _df['dist'].values
             _df['percentile'] = _df['dist'].parallel_apply(lambda x: stats.percentileofscore(values, x)/100)
+#             print(_df.head(10))
             _df.parallel_apply(aux_store2, axis=1, args=( domain1, domain2,))
+            
 
 
     @staticmethod
     def fetch_data(
             key
     ):
-        read_dict = redisStore.redis_conn.get(str(key))
-        _dict = pickle.loads(read_dict)
-        return _dict
-
+        print('Key:', key)
+        result = redisStore.redis_conn.get(str(key))
+        try:
+            result = pickle.loads(result)
+            return result
+        except:
+            return result
 
 # redisStore(
 #     DATA_LOC='./../generated_data_v1/us_import',
