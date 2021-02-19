@@ -49,15 +49,19 @@ def setup_up(subDIR):
     global op_save_dir
     global DATA_LOC
     global redis_obj
-    redis_obj = setup_Redis.redisStore(
+    
+    redis_obj = setup_Redis.redisStore
+    setup_Redis.redisStore(
         DATA_LOC=DATA_LOC,
         subDIR=subDIR
     )
-
+    
     redis_obj.ingest_pairWiseDist(
         data_dir='./../PairwiseComparison/pairWiseDist',
         subDIR=subDIR
     )
+    
+    return 
 
     emb_save_dir = config['emb_save_dir']
     Path(emb_save_dir).mkdir(exist_ok=True, parents=True)
@@ -94,20 +98,28 @@ def fetchRecord_details(
 
     global redis_obj
     global ID_COL
-    record_dict = redis_obj.fetch(key=str(int(id)))
+    record_dict = redis_obj.fetch_data(key=str(int(id)))
     domain_dims = get_domain_dims(subDIR)
     result = []
 
-    for pair in combinations(list(domain_dims.keys())):
+    for pair in combinations(list(domain_dims.keys()),2):
+        pair = sorted(pair)
         d1,d2 = pair[0],pair[1]
-        e1 = record_dict[d1]
-        e2 = record_dict[d2]
-        key = 'pairWiseD_{}_{}_{}'.format(emb_source,d1,e1,d2,e2)
-        r = redis_obj.fetch(key)
-        result.append(({d1:e1}, {d2:e2}, r))
+        e1 = int(record_dict[d1])
+        e2 = int(record_dict[d2])
+        key = 'pairWiseD_{}_{}_{}_{}_{}'.format(emb_source,d1,e1,d2,e2)
+        r = redis_obj.fetch_data(key)
+        result.append(({d1:e1}, {d2:e2},float(r.decode())))
+
     return result
 
-fetchRecord_details(
+
+
+DATA_LOC ='./../generated_data_v1/us_import'
+subDIR='01_2016'
+setup_up(subDIR)
+r = fetchRecord_details(
     id = 121983692,
     subDIR='01_2016'
 )
+print(r)
