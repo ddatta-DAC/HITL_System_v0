@@ -40,7 +40,11 @@ def get_domain_dims(
     return domain_dims
 
 
-def setup_up(subDIR):
+def initialize(
+    data_dir, 
+    pairWiseSist_data_dir
+    subDIR
+):
     global config
     global saved_model_dir
     global idMapping_df
@@ -50,6 +54,7 @@ def setup_up(subDIR):
     global DATA_LOC
     global redis_obj
     
+    DATA_LOC = data_dir
     redis_obj = setup_Redis.redisStore
     setup_Redis.redisStore(
         DATA_LOC=DATA_LOC,
@@ -57,33 +62,13 @@ def setup_up(subDIR):
     )
     
     redis_obj.ingest_pairWiseDist(
-        data_dir='./../PairwiseComparison/pairWiseDist',
+        data_dir= pairWiseSist_data_dir ,
         subDIR=subDIR
     )
     
-    return 
-
-    emb_save_dir = config['emb_save_dir']
-    Path(emb_save_dir).mkdir(exist_ok=True, parents=True)
-    Path(os.path.join(emb_save_dir, subDIR)).mkdir(exist_ok=True, parents=True)
-
-    idMapping_df = pd.read_csv(
-        os.path.join(DATA_LOC, subDIR, 'idMapping.csv'),
-        index_col=None
-    )
-    op_save_dir = config['op_save_dir']
-    Path(op_save_dir).mkdir(exist_ok=True, parents=True)
-    Path(os.path.join(op_save_dir, subDIR)).mkdir(exist_ok=True, parents=True)
-    mapping_dict = {}
-
-    for domain in set(idMapping_df['domain']):
-        tmp = idMapping_df.loc[(idMapping_df['domain'] == domain)]
-        serial_id = tmp['serial_id'].values.tolist()
-        entity_id = tmp['entity_id'].values.tolist()
-        mapping_dict[domain] = {
-            k: v for k, v in zip(serial_id, entity_id)
-        }
     return
+
+
 # =============================
 # Front end facing method
 # =============================
@@ -115,11 +100,12 @@ def fetchRecord_details(
 
 
 
-DATA_LOC ='./../generated_data_v1/us_import'
-subDIR='01_2016'
-setup_up(subDIR)
-r = fetchRecord_details(
-    id = 121983692,
-    subDIR='01_2016'
-)
-print(r)
+# data_dir ='./../generated_data_v1/us_import'
+# pairwise_data_dir = './../PairwiseComparison/pairWiseDist'
+# subDIR='01_2016'
+# initialize(data_dir, pairwise_data_dir, subDIR)
+# r = fetchRecord_details(
+#     id = 121983692,
+#     subDIR='01_2016'
+# )
+# print(r)
