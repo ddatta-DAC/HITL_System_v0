@@ -124,7 +124,6 @@ class redisStore:
             domain = fname.split('_')[1]
             arr = np.load(file, allow_pickle=True)
             emb_arr_dict[domain] = arr
-
         # --------------------------
         # Convert to serial mapping
         # --------------------------
@@ -171,7 +170,6 @@ class redisStore:
                 redisStore.redis_conn.set(key, data)
         return
 
-        # 'records2graph / saved_model_data / 01_2016 / mp2v_ShipmentDestination_128.npy'
 
 # redisStore(
 #     DATA_LOC='./../generated_data_v1/us_import',
