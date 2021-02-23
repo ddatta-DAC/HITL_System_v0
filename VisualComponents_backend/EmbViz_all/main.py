@@ -71,6 +71,8 @@ def get_record_entityEmbeddings(
     title_text = 'Emmbedding visualization of the Entities of the Record ID {} in 2-Dimension'.format(int(PanjivaRecordID))
     
     df = pd.DataFrame.from_dict(data_dict, orient='index').reset_index().rename(columns={'index':'domain', 0 :'X-component', 1 :'Y-component'})
+    df['domain'] = df['domain'] .apply(lambda x: x.replace('PanjivaID',''))
+    
     fig = px.scatter(df, x= 'X-component', y= 'Y-component', color="domain", text="domain" , title= title_text)
     fig.update_traces(textposition='top center', mode="markers+text", marker_line_width=2, marker_size=20, textfont_size=18)
                  
