@@ -53,13 +53,15 @@ def initialize(
     subDIR = _subDIR
     redis_obj.ingest_record_data(DATA_LOC, subDIR)
     if _html_saveDir is None:
-        _html_saveDir = './Cache_sankeyHTML'
-    html_saveDir = _html_saveDir
+        html_saveDir = './Cache_sankeyHTML'
+    else:
+        html_saveDir = _html_saveDir
+    
     Path(_html_saveDir).mkdir(exist_ok=True, parents=True)
     if _json_saveDir is None:
         json_saveDir = './jsonCache'
     else:
-        json_saveDir = json_saveDir
+        json_saveDir = _json_saveDir
 
     Path(json_saveDir).mkdir(exist_ok=True, parents=True)
     return
