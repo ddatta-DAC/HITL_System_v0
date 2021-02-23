@@ -157,7 +157,7 @@ class redisStore:
                 X[serial_id] = arr[entity_id]
 
         projections_dict = {}
-        tsne = TSNE(n_components=2, random_state=0, n_iter=300, learning_rate=10, verbose=1)
+        tsne = TSNE(n_components=2, random_state=0, n_iter=1750, learning_rate=12, verbose=1)
        
         projections = tsne.fit_transform(X)
        
