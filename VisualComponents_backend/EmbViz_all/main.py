@@ -47,6 +47,7 @@ def get_record_entityEmbeddings(
     record = redis_obj.fetch_data(
         str(int(PanjivaRecordID))
     )
+    print(record)
     data_dict = {}
     for _domain, entity_id in record.items():
         key = 'mp2v_{}_{}_{}'.format(EMB_DIM, _domain, entity_id)
@@ -55,6 +56,19 @@ def get_record_entityEmbeddings(
             data_dict[_domain] = vec
     return data_dict
 
+'''
+Example:
+main.initialize(
+    _DATA_LOC='./../generated_data_v1/us_import',
+    _subDIR='01_2016',
+    mp2v_emb_dir = './../records2graph/saved_model_data',
+    emb_dim = 64
+)
+
+main.get_record_entityEmbeddings(
+    PanjivaRecordID ='121983692'
+)
+'''
 
 
 

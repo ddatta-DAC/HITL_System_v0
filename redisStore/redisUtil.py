@@ -15,7 +15,7 @@ try:
     os.system("redis-server --port 6666 &")
 except:
     print('[INFO] Redis server already running')
-    DATA_STORED = False
+    DATA_STORED = True
 
 
 class redisStore:
@@ -27,7 +27,7 @@ class redisStore:
             return
 
         if not DATA_STORED:
-            redisStore.ingest_data(
+            redisStore.ingest_record_data(
                 DATA_LOC,
                 subDIR
             )
@@ -104,7 +104,10 @@ class redisStore:
     def fetch_np(
             key
     ):
-        data = msgpk_np.unpackb(redisStore.redis_conn.get('d'))
+        data = redisStore.redis_conn.get(key)
+        if key is None or data is None:
+            return None
+        data = msgpk_np.unpackb(data)
         return data
 
     # ----------
@@ -118,6 +121,8 @@ class redisStore:
             emb_dim=64
     ):
         file_list = glob.glob(os.path.join(mp2v_emb_dir, subDIR, 'mp2v_**{}**.npy'.format(emb_dim)))
+        if len(file_list)== 0 :
+            print(['ERROR :: No files in the embedding source!!!  CHECK!'])
         emb_arr_dict = {}
         for file in file_list:
             fname = os.path.split(file)[-1]
@@ -127,21 +132,22 @@ class redisStore:
         # --------------------------
         # Convert to serial mapping
         # --------------------------
+        
         idMapping_df = pd.read_csv(
             os.path.join(DATA_LOC, subDIR, 'idMapping.csv'), index_col=None
         )
         idMapping_df['serial_id'] = idMapping_df['serial_id'].astype(int)
         idMapping_df['entity_id'] = idMapping_df['entity_id'].astype(int)
-
+        
         enityID2serialID_mapping_dict = {}
-        serialIDentityID_mappping_dict = {}
         for domain in set(idMapping_df['domain']):
             tmp = idMapping_df.loc[(idMapping_df['domain'] == domain)]
             serial_id = tmp['serial_id'].values.tolist()
             entity_id = tmp['entity_id'].values.tolist()
-            enityID2serialID_mapping_dict[domain] = {k: v for k, v in zip(entity_id, serial_id)}
-            serialIDentityID_mappping_dict[serial_id] = (domain, serial_id)
+            enityID2serialID_mapping_dict[domain] = {k: v for k, v in zip(entity_id, serial_id)}            
+            
         total_entity_count = len(idMapping_df)
+        
         X = np.zeros([total_entity_count, emb_dim])
         for domain in set(idMapping_df['domain']):
             arr = emb_arr_dict[domain]
@@ -151,9 +157,10 @@ class redisStore:
                 X[serial_id] = arr[entity_id]
 
         projections_dict = {}
-        tsne = TSNE(n_components=2, random_state=0, n_iter=1500, learning_rate=10)
+        tsne = TSNE(n_components=2, random_state=0, n_iter=300, learning_rate=10, verbose=1)
+       
         projections = tsne.fit_transform(X)
-
+       
         for domain in set(idMapping_df['domain']):
             e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
             projections_dict[domain] = np.zeros([len(e_id_list), 2])
@@ -166,6 +173,7 @@ class redisStore:
             for entity_id in e_id_list:
                 key = 'mp2v_{}_{}_{}'.format(emb_dim, domain, entity_id)
                 data = projections_dict[domain][entity_id]
+                
                 data = msgpk_np.packb(data)
                 redisStore.redis_conn.set(key, data)
         return
