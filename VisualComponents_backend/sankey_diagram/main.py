@@ -45,7 +45,8 @@ _html_saveDir is a cache where the figures can be stored
 def initialize(
         _DATA_LOC=None,
         _subDIR=None,
-        _html_saveDir=None
+        _html_saveDir=None,
+        _json_saveDir =None
 ):
     global redis_obj, DATA_LOC, subDIR, html_saveDir, json_saveDir
     DATA_LOC = _DATA_LOC
@@ -55,7 +56,11 @@ def initialize(
         _html_saveDir = './Cache_sankeyHTML'
     html_saveDir = _html_saveDir
     Path(_html_saveDir).mkdir(exist_ok=True, parents=True)
-    json_saveDir = './jsonCache'
+    if _json_saveDir is None:
+        json_saveDir = './jsonCache'
+    else:
+        json_saveDir = json_saveDir
+
     Path(json_saveDir).mkdir(exist_ok=True, parents=True)
     return
 
