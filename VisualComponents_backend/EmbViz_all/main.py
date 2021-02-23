@@ -56,6 +56,7 @@ def get_record_entityEmbeddings(
     PanjivaRecordID,
     return_type = 3
 ):
+    global htmlSaveDir
     record = redis_obj.fetch_data(
         str(int(PanjivaRecordID))
     )
@@ -80,7 +81,7 @@ def get_record_entityEmbeddings(
         return html_String
     elif return_type == 3:
         fname = signature + '.html'
-        fpath = os.path.join(html_saveDir, fname)
+        fpath = os.path.join(htmlSaveDir, fname)
         fig.write_html(fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
         return fpath
     return 
