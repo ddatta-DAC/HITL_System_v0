@@ -182,21 +182,16 @@ def get_TimeSeries(
 
 # ==================================
 '''
-initialize(
-        _DATA_LOC='./../../',
-        _subDIR=None,
-        _html_saveDir=None,
-        _json_saveDir=None
+Example usage::
+
+from TimeSeries import fetchTimeSeries  as TS
+TS.initialize(
+    _DATA_LOC='./../generated_data_v1/us_import',
+    _subDIR='01_2016',
+    _html_saveDir='./htmlCacheDir',
+    _json_saveDir='./jsonCacheDir
+    
 )
-Sample calling code:
-fetchTS(
-        domain='ConsigneePanjivaID',
-        id=None,
-        dateColumn='',
-        table='',
-        title=None,
-        use_cache=True,
-        return_type=3
-)
+html_path_1, html_path_2 = TS.get_TimeSeries(PanjivaRecordID = '106645949',use_cache=False)
 
 '''
