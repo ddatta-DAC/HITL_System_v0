@@ -1,4 +1,5 @@
 SAVE_DIR: './saved_model_gnn'
 DATA_LOC: './../generated_data_v1/us_import'
 train_epochs: 100
-MP2V_features_LOC : './../record2graph/saved_model_data'
+MP2V_features_LOC : './../records2graph/saved_model_data'
+mp2vec_emb_dim: 128

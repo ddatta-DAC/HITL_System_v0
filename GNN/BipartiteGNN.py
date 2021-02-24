@@ -388,7 +388,9 @@ with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
     epoch_fileList = json.load(fh)
 
 subDIR_list = sorted(list(epoch_fileList.keys()))
-Parallel(n_jobs = MP.cpu_count())(
-    delayed(exec_training)(subDIR, train_epochs) for subDIR in subDIR_list
-)
+# Parallel(n_jobs = MP.cpu_count())(
+#     delayed(exec_training)(subDIR, train_epochs) for subDIR in subDIR_list
+# )
 
+for subDIR in subDIR_list:
+    exec_training(subDIR, train_epochs)
