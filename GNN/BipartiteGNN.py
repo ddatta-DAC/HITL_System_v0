@@ -44,6 +44,7 @@ attr_shipper_prefix = 'ShipperPanjivaID'
 bipartite_domains = sorted([attr_consignee_prefix, attr_shipper_prefix])
 MP2V_features_LOC = None
 SAVE_DIR = None
+gnn_emb_dim = None
 mp2vec_emb_dim = None
 # ==============================================
 # Functions
@@ -301,6 +302,7 @@ def exec_training(
     global SAVE_DIR
     global MP2V_features_LOC
     global mp2vec_emb_dim
+    global gnn_emb_dim
     SAVE_LOC = os.path.join(SAVE_DIR, subDIR)
     path_obj = Path(SAVE_LOC)
     path_obj.mkdir(exist_ok=True, parents=True)
@@ -345,7 +347,7 @@ def exec_training(
     print(' Graph object >> ', graph_obj)
     gnn_obj = GNN(
         inp_dim=input_features.shape[1],
-        out_dim=32
+        out_dim=gnn_emb_dim
     )
 
     gnn_obj = gnn_obj.to(device)
@@ -371,7 +373,7 @@ def exec_training(
         x[_entity_id] = gnn_features[_syn_id]
         # Save the data
         file_name = '{}_gnn_{}.npy'.format(d, gnn_features.shape[1])
-        file_path = os.path.join(SAVE_LOC, subDIR, file_name)
+        file_path = os.path.join(SAVE_LOC,  file_name)
         np.save(file_path, x)
     return gnn_features
 
@@ -383,6 +385,7 @@ train_epochs = int(config['train_epochs'])
 SAVE_DIR = config['SAVE_DIR']
 MP2V_features_LOC = config['MP2V_features_LOC']
 mp2vec_emb_dim =  config['mp2vec_emb_dim']
+gnn_emb_dim = config['gnn_emb_dim']
 
 with open(os.path.join(DATA_LOC, 'epoch_fileList.json'), 'r') as fh:
     epoch_fileList = json.load(fh)
