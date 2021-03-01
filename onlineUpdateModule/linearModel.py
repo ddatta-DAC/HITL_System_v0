@@ -200,10 +200,10 @@ class linearClassifier_bEF(
             domain_dims,
             binaryF_domains
     ):
-
         self.domain_dims = domain_dims
         self.total_entity_count = sum(domain_dims.values())
         self.domain_oneHotEncoders = []
+
         for dom, dim in self.domain_dims.items():
             self.domain_oneHotEncoders += [OneHotEncoder().fit(np.arange(dim).reshape([-1, 1]))]
         self.valid_binaryF_domains = np.zeros([self.num_domains])
@@ -228,12 +228,15 @@ class linearClassifier_bEF(
     # -----------------------
     # label_flag is 0 or 1  : per sample
     # -----------------------
-    def update_binary_VarW(self, X, label_flag):
+    def update_binary_VarW(
+            self,
+            X,
+            label_flag
+    ):
 
         label_flag = np.array(label_flag).reshape(-1)
         for d_idx in range(self.num_domains):
             if self.valid_binaryF_domains[d_idx] == 1:
-
                 _entity_idx = X[:, d_idx].reshape(-1)  # _entity_idx is a slice along column
                 e_idx = []
                 # For each sample check if it is labelled 1
