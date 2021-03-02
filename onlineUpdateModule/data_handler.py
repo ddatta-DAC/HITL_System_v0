@@ -27,9 +27,9 @@ class data_handler:
 
     ):
         ID_col = 'PanjivaRecordID'
-        self.embedding_data_path = embedding_data_path
+        self.embedding_data_path = os.path.join(embedding_data_path,subDIR)
         # This table stores the records upon which update happens
-        self.recordsTable = 'anomaly_records'
+        self.recordsTable = 'anomaly_records_{}'.format(subDIR)
         self.DATA_LOC = DATA_LOC
         self.subDIR = subDIR
         self.anomaly_result_dir = anomaly_result_dir
@@ -62,7 +62,7 @@ class data_handler:
 
         # Read in the anomaly detection results
         ad_result = pd.read_csv(
-            os.path.join(anomaly_result_dir, subDIR, 'combined_output.csv'),
+            os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'),
             index_col=None
         )
 
@@ -80,9 +80,8 @@ class data_handler:
         )
 
         combined_df_1 = combined_df_1.rename(columns={'rank': 'score'})
-        combined_df_1 = combined_df_1.sort_values(by='score', ascending=False)
-        combined_df_1['flag'] = 0
-        combined_df_1 = combined_df_1.sort_values(by='score')
+        combined_df_1['label'] = 0
+        combined_df_1 = combined_df_1.sort_values(by='score',ascending=False)
         assert len(combined_df_1) == len(test_data) and len(combined_df_1) == len(ad_result), print(' Merge error !!!')
 
         # ---------------------------------------
@@ -108,10 +107,11 @@ class data_handler:
         )
         self.data_df = potential_anomalies.copy(deep=True)
         del self.data_df['score']
+        self.create_entityInteractionStore()
         return
 
     def get_entity(self, recordID, domain):
-        return self.data_df.loc[self.data_df[self.ID_col]==recordID][domain]
+        return self.data_df.loc[self.data_df[self.ID_col]==recordID][domain].values[0]
 
     def get_serialID_to_entityID(self):
         serialID_mapping_loc = os.path.join(self.DATA_LOC, self.subDIR, 'idMapping.csv')
@@ -127,7 +127,7 @@ class data_handler:
     # These are the records upon which actions are performed.
     # ---------------------------------
     def get_working_records(self, exclude_updated=True):
-        sql_query = 'select * from {} ORDER BY score DESCENDING'.format(self.recordsTable)
+        sql_query = 'select * from {} ORDER BY score DESC'.format(self.recordsTable)
         df = pd.read_sql(
             sql_query,
             con=self.sqllite_engine, index_col=None)
@@ -143,14 +143,11 @@ class data_handler:
         self.entity_dict[domain] = {}
         self.entity_dict[domain] = {k: 0 for k in self.domain_value2id_dict[domain].keys()}
 
-        sql_query = """
-        CREATE TABLE IF NOT EXISTS {} (
-            {} BIGINT PRIMARY KEY,
-            label INT,   
-        );""".format(domain, domain)
-        _cursor_ = self.sqllite_engine.cursor()
-        _cursor_.execute(sql_query)
-        _cursor_.commit()
+        sql_query = " CREATE TABLE IF NOT EXISTS {} ({} BIGINT PRIMARY KEY, label INT);".format(domain, domain)
+        
+        print('Executed SQL >', sql_query)
+        with self.sqllite_engine.connect() as connection:
+            result = connection.execute(sql_query)
         return
 
     # ------------------------------------
@@ -161,14 +158,14 @@ class data_handler:
         self.entity_dict[domain][entity_value] = label
         sql_query = """ INSERT OR IGNORE INTO {} ({},{})
                       VALUES({} {}) """.format(domain, domain, 'label', entity_value, label)
-        _cursor_ = self.sqllite_engine.cursor()
-        _cursor_.execute(sql_query)
-        _cursor_.commit()
+        
+        with self.sqllite_engine.connect() as connection:
+            result = connection.execute(sql_query)
+            
 
         sql_query = "UPDATE {} SET label ={} where {}={}".format(domain, label, domain, entity_value)
-        _cursor_ = self.sqllite_engine.cursor()
-        _cursor_.execute(sql_query)
-        _cursor_.commit()
+        with self.sqllite_engine.connect() as connection:
+            result = connection.execute(sql_query)
         return
 
     def get_entityFlag(self, domain, entity_value=None, entity_id=None):
@@ -182,17 +179,17 @@ class data_handler:
     # The domain table stores entities (specifically Consignee & Shipper) that have been flagged.
     # -------------------------------------
     def store_recordFlag(self, recordID, label=1):
-        sql_query = "UPDATE {} SET label = {} where {}={}".format('PanjivaRecordID', label, 'PanjivaRecordID', recordID)
-        _cursor_ = self.sqllite_engine.cursor()
-        _cursor_.execute(sql_query)
-        _cursor_.commit()
+        
+        sql_query = "UPDATE {} SET label = {} where {}={}".format(self.recordsTable, label, 'PanjivaRecordID', recordID)
+        with self.sqllite_engine.connect() as connection:
+            result = connection.execute(sql_query)
         return
 
     def get_nominal_records_sample(self, count=5000):
 
         # Read in test data
         ad_result = pd.read_csv(
-            os.path.join(self.anomaly_result_dir, self.subDIR, 'combined_output.csv'),
+            os.path.join(self.anomaly_result_dir, self.subDIR, 'AD_output.csv'),
             index_col=None
         )
 
@@ -222,7 +219,7 @@ class data_handler:
             self
     ):
         domain_list = list(self.domain_dims.keys())
-        self.entityInteraction_pairs = {}
+        self.entityInteraction_pairs = OrderedDict({})
         for domain_pair in itertools.combinations(domain_list,2):
             key = '_'.join(list(sorted(domain_pair)))
             self.entityInteraction_pairs[key] = []
@@ -234,6 +231,7 @@ class data_handler:
             domain_2,
             entity_2
     ):
+        print('register_entityInteraction ::', domain_1, entity_1, domain_2, entity_2)
         if domain_2 < domain_1:
             domain_1,domain_2 = domain_2,domain_1
             entity_1,entity_2 = entity_2,entity_1
@@ -246,19 +244,27 @@ class data_handler:
     def get_domainPairInteractionsRegistered(self, recordID):
         record_row = self.data_df.loc[self.data_df[self.ID_col]==recordID]
         domain_list = list(self.domain_dims.keys())
-        keys = []
+        keys = list( self.entityInteraction_pairs.keys())
         for domain_pair in itertools.combinations(domain_list, 2):
             keys.append('_'.join(list(sorted(domain_pair))))
-
+        record_row_dict = record_row.to_dict()
+        print('get_domainPairInteractionsRegistered::', record_row)
         def aux(key):
             nonlocal  record_row
             d1,d2 = key.split('_')
-            e1 = record_row[d1]
-            e2 = record_row[d2]
-            if (e1,e2) in self.entityInteraction_pairs[key]:
+            e1 = record_row[d1].values[0]
+            e2 = record_row[d2].values[0]
+           
+            t = (e1,e2)
+            self.entityInteraction_pairs[key]
+            if t in self.entityInteraction_pairs[key]:
                 return (key,True)
             else:
                 return (key,False)
-        results = Parallel(n_jobs=MP.cpu_count())(delayed(aux)(key) for key in keys)
+        results = []
+#         Parallel(n_jobs=MP.cpu_count(), prefer="threads")(delayed(aux)(key) for key in keys)
+        for key in keys:
+            results.append(aux(key))
         domain_pairs = [ _item[0] for _item in results if _item[1] == True ]
+        print(recordID, domain_pairs)
         return domain_pairs

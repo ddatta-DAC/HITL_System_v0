@@ -8,7 +8,6 @@ import os
 import sklearn
 from collections import OrderedDict
 
-
 class record_class:
     embedding = None
     serialID_to_entityID = None
@@ -17,12 +16,13 @@ class record_class:
     def __setup_embedding__(embedding_path, serialID_to_entityID, _normalize=True):
         record_class.embedding = {}
         record_class.serialID_to_entityID = serialID_to_entityID
-        files = glob.glob(os.path.join(embedding_path, '**.npy'))
+        files = glob.glob(os.path.join(embedding_path, 'mp2v_**_64.npy'))
         for f in sorted(files):
             emb = np.load(f)
-            domain = f.split('/')[-1].split('_')[-1].split('.')[0]
+            domain = f.split('/')[-1].split('_')[-2]
             if _normalize:
                 emb = normalize(emb, axis=1)
+           
             record_class.embedding[domain] = emb
         return
 

@@ -175,7 +175,7 @@ class linearClassifier_bEF(
     # ==============================
     # Train the model on positive samples only
     # ==============================
-    def fit_on_pos(self, X, y, n_epochs=None, log_interval=250):
+    def fit_on_pos(self, X, y, n_epochs=None, log_interval=200):
         pos_idx = np.where(y == 1)[0]
         bs = self.batch_size
         if n_epochs is None:
@@ -212,7 +212,7 @@ class linearClassifier_bEF(
         for dom, dim in self.domain_dims.items():
             if dom in binaryF_domains:
                 self.valid_binaryF_domains[_tmpidx] = 1
-        _tmpidx += 1
+            _tmpidx += 1
 
         # -------------------------------
         # Setup the initial weights
