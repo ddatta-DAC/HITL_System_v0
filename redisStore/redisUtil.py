@@ -71,7 +71,7 @@ class redisStore:
     ):
         import numpy as np
         from scipy import stats
-        stats.percentileofscore([1, 2, 3, 4], 3)
+       
         files = glob.glob(os.path.join(data_dir, subDIR, '**.csv'))
 
         def aux_store2(row, domain1, domain2):
@@ -123,7 +123,7 @@ class redisStore:
     ):
         
         # Check if tsne results saved
-        tsne_results_file = 'tsne_{}_{}_{}.npy'.format(subDIR,emb_dim,2)
+        tsne_results_file = 'tsne_{}_{}_{}.pkl'.format(subDIR,emb_dim,2)
         tsne_results_dir = '__tmp_tsne__'
         Path(tsne_results_dir).mkdir(exist_ok=True, parents=True)
         tsne_results_path = os.path.join(tsne_results_dir, tsne_results_file)
