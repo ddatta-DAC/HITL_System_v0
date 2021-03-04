@@ -7,6 +7,7 @@ from pathlib import Path
 import plotly
 from plotly import express as px
 import os
+import plotly.io as pio
 
 DATA_LOC = None
 subDIR = None

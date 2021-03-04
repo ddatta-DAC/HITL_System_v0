@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.manifold import TSNE
 import msgpack
 import msgpack_numpy as msgpk_np
+from pathlib import Path
 
 pandarallel.initialize()
 DATA_STORED = False
@@ -120,54 +121,68 @@ class redisStore:
             mp2v_emb_dir,
             emb_dim=64
     ):
-        file_list = glob.glob(os.path.join(mp2v_emb_dir, subDIR, 'mp2v_**{}**.npy'.format(emb_dim)))
-        if len(file_list)== 0 :
-            print(['ERROR :: No files in the embedding source!!!  CHECK!'])
-        emb_arr_dict = {}
-        for file in file_list:
-            fname = os.path.split(file)[-1]
-            domain = fname.split('_')[1]
-            arr = np.load(file, allow_pickle=True)
-            emb_arr_dict[domain] = arr
-        # --------------------------
-        # Convert to serial mapping
-        # --------------------------
+        
+        # Check if tsne results saved
+        tsne_results_file = 'tsne_{}_{}_{}.npy'.format(subDIR,emb_dim,2)
+        tsne_results_dir = '__tmp_tsne__'
+        Path(tsne_results_dir).mkdir(exist_ok=True, parents=True)
+        tsne_results_path = os.path.join(tsne_results_dir, tsne_results_file)
+        projections_dict = {}
+        
         
         idMapping_df = pd.read_csv(
             os.path.join(DATA_LOC, subDIR, 'idMapping.csv'), index_col=None
         )
         idMapping_df['serial_id'] = idMapping_df['serial_id'].astype(int)
         idMapping_df['entity_id'] = idMapping_df['entity_id'].astype(int)
-        
-        enityID2serialID_mapping_dict = {}
-        for domain in set(idMapping_df['domain']):
-            tmp = idMapping_df.loc[(idMapping_df['domain'] == domain)]
-            serial_id = tmp['serial_id'].values.tolist()
-            entity_id = tmp['entity_id'].values.tolist()
-            enityID2serialID_mapping_dict[domain] = {k: v for k, v in zip(entity_id, serial_id)}            
             
-        total_entity_count = len(idMapping_df)
-        
-        X = np.zeros([total_entity_count, emb_dim])
-        for domain in set(idMapping_df['domain']):
-            arr = emb_arr_dict[domain]
-            e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
-            for entity_id in e_id_list:
-                serial_id = enityID2serialID_mapping_dict[domain][entity_id]
-                X[serial_id] = arr[entity_id]
+        if os.path.exists(tsne_results_path):
+            with open(tsne_results_path, 'rb') as fh:
+                projections_dict = pickle.load(fh)
+        else:
+            file_list = glob.glob(os.path.join(mp2v_emb_dir, subDIR, 'mp2v_**{}**.npy'.format(emb_dim)))
+            if len(file_list)== 0 :
+                print(['ERROR :: No files in the embedding source!!!  CHECK!'])
+            emb_arr_dict = {}
+            for file in file_list:
+                fname = os.path.split(file)[-1]
+                domain = fname.split('_')[1]
+                arr = np.load(file, allow_pickle=True)
+                emb_arr_dict[domain] = arr
+            # --------------------------
+            # Convert to serial mapping
+            # --------------------------
 
-        projections_dict = {}
-        tsne = TSNE(n_components=2, random_state=0, n_iter=1750, learning_rate=12, verbose=1)
-       
-        projections = tsne.fit_transform(X)
-       
-        for domain in set(idMapping_df['domain']):
-            e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
-            projections_dict[domain] = np.zeros([len(e_id_list), 2])
-            for entity_id in e_id_list:
-                serial_id = enityID2serialID_mapping_dict[domain][entity_id]
-                projections_dict[domain][entity_id] = projections[serial_id]
+            enityID2serialID_mapping_dict = {}
+            for domain in set(idMapping_df['domain']):
+                tmp = idMapping_df.loc[(idMapping_df['domain'] == domain)]
+                serial_id = tmp['serial_id'].values.tolist()
+                entity_id = tmp['entity_id'].values.tolist()
+                enityID2serialID_mapping_dict[domain] = {k: v for k, v in zip(entity_id, serial_id)}            
 
+            total_entity_count = len(idMapping_df)
+
+            X = np.zeros([total_entity_count, emb_dim])
+            for domain in set(idMapping_df['domain']):
+                arr = emb_arr_dict[domain]
+                e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
+                for entity_id in e_id_list:
+                    serial_id = enityID2serialID_mapping_dict[domain][entity_id]
+                    X[serial_id] = arr[entity_id]
+
+            tsne = TSNE(n_components=2, random_state=0, n_iter=1750, learning_rate=12, verbose=1)
+            projections = tsne.fit_transform(X)
+
+            for domain in set(idMapping_df['domain']):
+                e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
+                projections_dict[domain] = np.zeros([len(e_id_list), 2])
+                for entity_id in e_id_list:
+                    serial_id = enityID2serialID_mapping_dict[domain][entity_id]
+                    projections_dict[domain][entity_id] = projections[serial_id]
+            
+            with open(tsne_results_path, 'wb') as fh:
+                pickle.dump(projections_dict, fh, protocol=pickle.HIGHEST_PROTOCOL)
+            
         for domain in set(idMapping_df['domain']):
             e_id_list = idMapping_df.loc[idMapping_df['domain'] == domain]['entity_id']
             for entity_id in e_id_list:
