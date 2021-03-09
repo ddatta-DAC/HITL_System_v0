@@ -19,7 +19,7 @@ from scipy.spatial.distance import cosine
 import pickle
 from itertools import combinations
 from pathlib import Path
-from redisStore import setup_Redis
+from redisStore import redisUtil
 from utils import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -29,7 +29,7 @@ config = None
 ID_COL = 'PanjivaRecordID'
 mapping_dict = None
 op_save_dir = None
-redis_obj = None
+redis_obj = redisUtil.redisStore
 
 def get_domain_dims(
         subDIR
@@ -58,8 +58,9 @@ def initialize(
     global redis_obj
     
     DATA_LOC = data_dir
-    redis_obj = setup_Redis.redisStore
-    setup_Redis.redisStore(
+
+ 
+    redis_obj.ingest_record_data(
         DATA_LOC=DATA_LOC,
         subDIR=subDIR
     )
@@ -69,7 +70,6 @@ def initialize(
         subDIR = subDIR
     )
     
-
 
 # =============================
 # Front end facing method
