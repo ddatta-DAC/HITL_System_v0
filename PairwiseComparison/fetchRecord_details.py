@@ -30,11 +30,14 @@ ID_COL = 'PanjivaRecordID'
 mapping_dict = None
 op_save_dir = None
 redis_obj = redisUtil.redisStore
+DATA_LOC = None
+
 
 def get_domain_dims(
         subDIR
 ):
     global DATA_LOC
+    
     with open(os.path.join(DATA_LOC, '{}/domain_dims.pkl'.format(subDIR)), 'rb')  as fh:
         domain_dims = pickle.load(fh)
     return domain_dims
@@ -58,8 +61,7 @@ def initialize(
     global redis_obj
     
     DATA_LOC = data_dir
-
- 
+    
     redis_obj.ingest_record_data(
         DATA_LOC=DATA_LOC,
         subDIR=subDIR
@@ -69,7 +71,13 @@ def initialize(
         data_dir = pairWiseDist_data_dir ,
         subDIR = subDIR
     )
-    
+ 
+def setupGlobals(
+   _DATA_LOC
+): 
+    global DATA_LOC
+    DATA_LOC = _DATA_LOC
+
 
 # =============================
 # Front end facing method
@@ -106,8 +114,12 @@ def fetchRecord_details(
 # pairwise_data_dir = './../PairwiseComparison/pairWiseDist'
 # subDIR='01_2016'
 # initialize(data_dir, pairwise_data_dir, subDIR)
+#
 # r = fetchRecord_details(
 #     id = 121983692,
 #     subDIR='01_2016'
+# )
+# setupGlobals(
+#   _DATA_LOC
 # )
 # print(r)
