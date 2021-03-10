@@ -71,12 +71,14 @@ def initialize(
         data_dir = pairWiseDist_data_dir ,
         subDIR = subDIR
     )
- 
+    return
+
 def setupGlobals(
    _DATA_LOC
 ): 
     global DATA_LOC
     DATA_LOC = _DATA_LOC
+    return 
 
 
 # =============================
