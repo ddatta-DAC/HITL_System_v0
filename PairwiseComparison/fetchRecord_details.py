@@ -83,8 +83,8 @@ def fetchRecord_details(
         emb_source = 'AD'
 ):
 
-    global redis_obj
-    global ID_COL
+    redis_obj = redisUtil.redisStore
+    ID_COL = 'PanjivaRecordID'
     record_dict = redis_obj.fetch_data(key=str(int(id)))
     domain_dims = get_domain_dims(subDIR)
     result = []
