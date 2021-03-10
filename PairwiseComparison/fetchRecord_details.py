@@ -107,7 +107,7 @@ def fetchRecord_details(
         key = 'pairWiseD_{}_{}_{}_{}_{}'.format(emb_source,d1,e1,d2,e2)
         r = redis_obj.fetch_data(key)
         result.append(({d1:e1}, {d2:e2},float(r.decode())))
-
+    result = list(sorted(result, key = lambda x: x[2], reverse=True))
     return result
 
 
