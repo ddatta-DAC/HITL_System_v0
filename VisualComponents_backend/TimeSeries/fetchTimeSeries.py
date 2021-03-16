@@ -98,7 +98,7 @@ def fetchTS(
             x="Date",
             hover_data={"Date": "|%B "},
             title=title,
-            color_continuous_scale= px.colors.sequential.Viridis,
+            color_continuous_scale= px.colors.sequential.Rainbow,
         )
         fig.update_xaxes(
             dtick="M1",
@@ -113,7 +113,7 @@ def fetchTS(
             title_font_family="Times New Roman",
             title_font_color="black",
             legend_title_font_color="green",
-            font_size=16,
+            font_size=15,
             paper_bgcolor='rgba(255, 255, 255 ,0.5)',
             plot_bgcolor='rgba(255,240,240,0.1)',
             xaxis_range=['2015-01-01','2017-12-31']
