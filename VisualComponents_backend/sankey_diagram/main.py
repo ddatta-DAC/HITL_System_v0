@@ -135,7 +135,8 @@ def get_sankey_diagram(
         diagram_type=1,
         link_count_upper_bound=100,
         return_type=1,
-        use_cache=True,
+        fig_height=600,
+        use_cache=True
 ):
     global DATA_LOC
     global subDIR
@@ -226,10 +227,22 @@ def get_sankey_diagram(
                 ))])
 
         fig.update_layout(
-            title_text=title,
-            font_size=15,
+            font_size=8,
             paper_bgcolor='white'
         )
+        
+        fig.update_layout(
+            autosize=True,
+            font=dict(
+                family="Arial",
+                size=12,
+                color="Black"
+            ),
+            plot_bgcolor='rgba(250,250,250,0.15)'
+        )
+        fig.update_layout(margin = dict(t=0, l=0, r=0, b=0))
+        fig.update_layout(height=fig_height)
+
         if use_cache:
             fig_json = io.to_json(fig)
             with open(fig_json_path, 'w') as f:
@@ -247,3 +260,42 @@ def get_sankey_diagram(
             fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False
         )
         return fpath
+
+    
+# ----------------------------------------
+'''
+
+jsonCacheDir = './jsonCache'
+htmlCacheDir = './htmlCache'
+
+sankey.initialize(
+    _DATA_LOC='./../generated_data_v1/us_import',
+    _subDIR='01_2016',
+    _html_saveDir=htmlCacheDir,
+    _json_saveDir=jsonCacheDir,
+)
+
+# [NOTE] :: needs to have 2 calls
+# Place 2 diagrams in 2 tabs.
+# Call with type diagram_type= 1
+# Visualization heading should be   'ShipmentOrigin - PortOfLading - HSCode - PortOfUnlading - ShipmentDestination'
+get_sankey_diagram(
+        PanjivaRecordID,
+        diagram_type=1,
+        link_count_upper_bound=100,
+        return_type=2,
+        fig_height=600,
+        use_cache=True
+)
+# Call with type diagram_type=2
+# Visualization heading should be  'ConsigneeName - HSCode - ShipperName'
+get_sankey_diagram(
+        PanjivaRecordID,
+        diagram_type=2,
+        link_count_upper_bound=100,
+        return_type=2,
+        fig_height=600,
+        use_cache=True
+)
+
+'''
