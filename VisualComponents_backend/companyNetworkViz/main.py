@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+import networkx as nx
 import os
 from pandarallel import pandarallel
 pandarallel.initialize()
@@ -8,6 +8,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import matplotlib.pyplot as plt
 from pyvis.network import Network
+from sqlalchemy import create_engine
 import pandas as pd
 import faiss
 from IPython.display import HTML
@@ -20,15 +21,15 @@ sys.path.append('./../..')
 from DB_Ingestion.sqlite_engine import sqlite
 from redisStore import redisUtil
 import pickle
-from DB_Ingestion.sqlite_engine import sqlite
 
+
+# ========================================================================================================
 SQL_conn = sqlite().get_engine()
 DATA_LOC = None
 subDIR = None
 html_saveDir = None
 json_saveDir = None
 redis_obj = redisUtil.redisStore
-
 column_values2id = None
 DATA_LOC = None
 subDIR = None
@@ -39,19 +40,19 @@ subDIR = None
 NN_count = 25
 df_cache = None
 
+# SQL_conn = create_engine('sqlite:///./../../DB/wwf.db', echo=False)
 
 # =========================================================================================================
-
-
 def preprocess_data (
-    num_NN = 25
+    num_NN = 10
 ):
     global DATA_LOC, saved_emb_loc, subDIR, df_cache
-    consignee_embedding = np.load( os.path.join(saved_emb_loc,subDIR,'{}_gnn_{}.npy'.format('ConsigneePanjivaID',64))).astype(np.float32)
+    consignee_embedding = np.load(os.path.join(saved_emb_loc,subDIR,'{}_gnn_{}.npy'.format('ConsigneePanjivaID',64))).astype(np.float32)
     shipper_embedding = np.load(os.path.join(saved_emb_loc,subDIR, '{}_gnn_{}.npy'.format('ShipperPanjivaID',64))).astype(np.float32)
 
     vec_shipper = shipper_embedding
     vec_consignee = consignee_embedding
+    
     tags_consignee = ['Consignee_{}'.format(_) for _ in np.arange(consignee_embedding.shape[0]).astype(int)]
     tags_shipper = ['Shipper_{}'.format(_) for _ in np.arange(shipper_embedding.shape[0]).astype(int)]
 
@@ -63,10 +64,10 @@ def preprocess_data (
     
     consignee_serial_ids = np.arange(consignee_embedding.shape[0]).astype(int)
     shipper_serial_ids = np.arange(shipper_embedding.shape[0]).astype(int)
+    
     # ===================
     # Create FAISS object
     # ===================
-    
     vectors  = np.vstack([consignee_embedding, shipper_embedding]).astype(np.float32)
     index = faiss.IndexFlatL2(vectors.shape[1])
     index.add(vectors.astype(np.float32))
@@ -86,7 +87,7 @@ def preprocess_data (
     train_df = pd.read_csv( os.path.join(DATA_LOC, subDIR, 'train_data.csv'),index_col=None)
     df = train_df[['ConsigneePanjivaID','ShipperPanjivaID']].drop_duplicates()
     
-    # Find the nearest neighbor for consignee
+    # Find the nearest neighbor for all consignee
     pairs_1 = find_NearestNbrs (
         index_obj = index, 
         serialID2entityID = serialID2entityID,
@@ -96,7 +97,7 @@ def preprocess_data (
         num_NN = num_NN
     )
     
-    # Find the nearest neighbor for consignee
+    # Find the nearest neighbor for all shippers
     pairs_2 = find_NearestNbrs (
         index_obj = index,
         serialID2entityID = serialID2entityID,
@@ -108,7 +109,6 @@ def preprocess_data (
 
     pairs_1 = np.array(pairs_1)
     pairs_2 = np.array(pairs_2)
-                           
     
     tmpdf_1 = pd.DataFrame( {
         'ConsigneePanjivaID': pairs_1[:,0],
@@ -121,11 +121,16 @@ def preprocess_data (
     })
     
     df_1 = tmpdf_1.copy()
-    df_1 = df_1.append(tmpdf_2,ignore_index=True)
+    df_1 = df_1.append(tmpdf_2, ignore_index=True)
     df_1 = df_1.drop_duplicates()
     
     df_1['weight'] = df_1.apply(calc_sim, axis=1).reset_index(drop=True)
+    # Normalize the wights
+    _min = np.min(df_1['weight'])
+    _max = np.max(df_1['weight'])
+    df_1['weight'] =  df_1['weight'].apply(lambda x: (x-_min)/(_max-_min))
     df_projected =  df_1.copy(deep=True)
+    
     # ------------------------------------
     # Add in the actual links
     # ------------------------------------
@@ -141,7 +146,6 @@ def preprocess_data (
     df_projected.to_csv(fname, index=None)
     return  
 
-
 # ============================================
 # Find the nearest neigbhbors using Embedding
 # The return is a list of pair of entity_ids
@@ -154,8 +158,8 @@ def find_NearestNbrs(
     id_list2, 
     num_NN
 ): 
-    distances, NN_ids = index_obj.search( vector, k = num_NN*4) 
-    
+    print('Finding nearest neighbors...')
+    distances, NN_ids = index_obj.search( vector, k = num_NN*4)  
     # ---------------------------------------------------
     # Filter nbr to be of other type (bipartite graph)
     # ---------------------------------------------------
@@ -176,8 +180,10 @@ def find_NearestNbrs(
     for pair in res:
         for _item in pair[1]:
             pairs.append((pair[0], serialID2entityID[_item]))
-    
+    print(len(pairs))
     return pairs
+
+
 
 
 def initialize(
@@ -185,13 +191,18 @@ def initialize(
     _subDIR,
     _saved_emb_loc,
     _df_cache,
-    _html_cache
+    _html_cache,
+    db_loc
 ):
-    global DATA_LOC, subDIR, redis_obj, column_values2id, NN_count, df_cache, html_cache, saved_emb_loc
+    global DATA_LOC, subDIR, redis_obj, column_values2id, NN_count, df_cache, html_cache, saved_emb_loc, SQL_conn
+    SQL_conn = create_engine(
+        'sqlite:///{}'.format(db_loc), 
+        echo=False
+    )
     DATA_LOC = _DATA_LOC
     subDIR = _subDIR
     saved_emb_loc = _saved_emb_loc
-   
+    
     with open(os.path.join(DATA_LOC, subDIR,'col_val2id_dict.pkl'), 'rb') as fh:
         column_values2id = pickle.load(fh)
     df_cache  = _df_cache
@@ -199,12 +210,14 @@ def initialize(
     Path(df_cache).mkdir(exist_ok=True,parents=True)
     Path(html_cache).mkdir(exist_ok=True,parents=True)
     redis_obj.ingest_record_data(DATA_LOC, subDIR)
-    preprocess_data(NN_count)
+    preprocess_data(10)
     return 
     
-    
 
-def obtain_node_display_data(node_type, _id):
+def obtain_node_display_data(
+    node_type,
+    _id
+):
     global SQL_conn
     global DATA_LOC, subDIR
     global column_values2id
@@ -212,6 +225,7 @@ def obtain_node_display_data(node_type, _id):
     # get the actual value from the id passed
     __ID__ = [value  for value, e_id  in column_values2id[node_type].items() if e_id == int(_id)][0]
     display_str = ''
+    
     if node_type == 'ConsigneePanjivaID':
         df = pd.read_sql(
                 "select {},{},{},{} from {} where {}={}".format(
@@ -224,6 +238,10 @@ def obtain_node_display_data(node_type, _id):
         display_str += '<br>' .join(
                 [str(df['ConsigneeName'].values[0]),str(df['ConsigneeCity'].values[0]),str(df['ConsigneeCountry'].values[0])]
         )
+        
+        df = pd.read_sql('select count(*) as count  from Records where ConsigneePanjivaID={}'.format(__ID__), SQL_conn, index_col=None)
+        count = df['count'].values[0]
+        
     if node_type == 'ShipperPanjivaID':
         df = pd.read_sql(
                 "select {},{},{},{} from {} where {}={}".format(
@@ -236,134 +254,161 @@ def obtain_node_display_data(node_type, _id):
         display_str += '<br>' .join(
             [str(df['ShipperName'].values[0]), str(df['ShipperCity'].values[0]), str(df['ShipperCountry'].values[0])]
         )
-    return __ID__, display_str
+        df = pd.read_sql('select count(*) as count from Records where ShipperPanjivaID={}'.format(__ID__),  SQL_conn, index_col=None)
+        count = df['count'].values[0]
+    count = int (10 + (np.log10(count)+1)*2)
+    return __ID__, display_str,count
 
 
+# ================================================================
+# Main function
+# ================================================================
 def visualize(
     PanjivaRecordID,
     fig_height = '720px',
     fig_width = '100%',
-    title=False
+    title=False,
+    return_type=2
 ):
     global DATA_LOC, subDIR, redis_obj, df_cache, html_cache
     signature_fname = 'consigneeShipper_{}_{}_{}.html'.format(PanjivaRecordID,fig_height,fig_width) 
     
-    if os.path.exists(os.path.join(html_cache, signature_fname)):
+    f_path = os.path.join(
+        html_cache, 
+        signature_fname
+    )
+    if os.path.exists(os.path.join(html_cache, signature_fname)) and return_type==2:
         return os.path.join(html_cache, signature_fname)
     
     # -----------------------
     # Read in saved dataframes 
+    df_actual = pd.read_csv(os.path.join(df_cache, 'df_actual.csv'),index_col=None)
+    
     df_0 = pd.read_csv(os.path.join(df_cache, 'df_actual.csv'),index_col=None)
     df_1 = pd.read_csv(os.path.join(df_cache, 'df_projected.csv'),index_col=None)
-
     
+    # -----------------------
     record = redis_obj.fetch_data(str(PanjivaRecordID))
+    print('record >>', record)
+    
     consignee = 'ConsigneePanjivaID-' + str(record['ConsigneePanjivaID'])
     shipper = 'ShipperPanjivaID-' + str(record['ShipperPanjivaID'])
     
     if consignee is not None and  shipper is not None:
-        df_0 = df_0.loc[(df_0['ConsigneePanjivaID']==consignee)|(df_0['ShipperPanjivaID']==shipper)]
-        df_1 = df_1.loc[(df_1['ConsigneePanjivaID']==consignee)|(df_1['ShipperPanjivaID']==shipper)]
-    elif consignee is not None:
-        df_0 = graph_data.loc[df_0['ConsigneePanjivaID']==consignee]
-        df_1 = graph_data.loc[df_1['ConsigneePanjivaID']==consignee]
-    elif shipper is not None:
-        df_0 = df_0.loc[df_0['ShipperPanjivaID']==shipper]
-        df_1 = df_1.loc[df_1['ShipperPanjivaID']==shipper]
+        df_0 = df_0.loc[(df_0['ConsigneePanjivaID']==consignee) | (df_0['ShipperPanjivaID']==shipper)]
+        
+
+    df_pred_consignee = df_1.loc[ (df_1['ShipperPanjivaID']==shipper)].sort_values(by='weight',ascending=False).head(10)
+    df_pred_shipper = df_1.loc[(df_1['ConsigneePanjivaID']==consignee) ].sort_values(by='weight',ascending=False).head(10)
     
     if title is True:
         title_text = 'Network of Consignee & Shippers'
     else:
         title_text = ''
-    _net = Network(
-        height=fig_height, 
-        width=fig_width,
-        bgcolor="white", 
-        font_color="black", 
-        heading= title_text,
-        notebook=False
+    # ---------------------------
+
+    # Add in secondary edges
+    df_2 = df_actual.loc[
+        (df_actual['ConsigneePanjivaID'].isin(df_pred_consignee['ConsigneePanjivaID'])) |
+        (df_actual['ShipperPanjivaID'].isin(df_pred_shipper['ShipperPanjivaID']))
+    ]
+    # ---------------------------
+    # Create a networkx graph 
+    nx_graph = nx.Graph()
+    # Add nodes
+    consignee_nodes = df_0['ConsigneePanjivaID'].values.tolist() 
+    consignee_nodes+= df_pred_consignee['ConsigneePanjivaID'].values.tolist()  
+    consignee_nodes+= df_pred_shipper['ConsigneePanjivaID'].values.tolist() 
+    consignee_nodes+= df_2['ConsigneePanjivaID'].values.tolist()
+    consignee_nodes = list(set(consignee_nodes))
+    
+    shipper_nodes = df_0['ShipperPanjivaID'].values.tolist() 
+    shipper_nodes += df_pred_consignee['ShipperPanjivaID'].values.tolist() 
+    shipper_nodes += df_pred_shipper['ShipperPanjivaID'].values.tolist()
+    shipper_nodes += df_2['ShipperPanjivaID'].values.tolist()
+    shipper_nodes = list(set(shipper_nodes))
+   
+    
+    # Obtain node data 
+    def aux_get_data(node_id):
+        node_type, _id = node_id.split('-')
+        _ID_, node_descriptor,node_size = obtain_node_display_data(node_type, _id)
+        return (node_id, node_descriptor, _ID_, node_size )
+        
+    node_data_consignee = Parallel(n_jobs=MP.cpu_count(),prefer="threads")(
+        delayed(aux_get_data)(node,) for node in consignee_nodes
     )
+    node_data_shipper = Parallel(n_jobs=MP.cpu_count(),prefer="threads")(
+        delayed(aux_get_data)(node,) for node in shipper_nodes
+    )
+    for cn in node_data_consignee:
+        nx_graph.add_node( cn[0], label = cn[2], title = cn[1], size = cn[3], color='Coral')
     
-    # set the physics layout of the network
-    _net.barnes_hut() 
+    for cn in node_data_shipper:
+        nx_graph.add_node( cn[0], label = cn[2], title = cn[1], size = cn[3], color='MediumSlateBlue')
+        
     
-    i = 0
-    for _type, _df in zip(['actual','projected'],[df_0, df_1]):
+    for _type, _df in zip(['actual','actual','predicted','predicted'],[df_0, df_2, df_pred_consignee, df_pred_shipper]):
         sources = _df['ConsigneePanjivaID']
         targets = _df['ShipperPanjivaID']
         weights = _df['weight']
-        if _type =='actual':
-            edge_arrow_type = False
-        else:
-            edge_arrow_type = True
         edge_data = zip(sources, targets, weights)
         for e in edge_data:
             src = e[0]
             dst = e[1]
             w = e[2]
-            _net.add_node(src, src, title=src, group=2*i+0,labelHighlightBold = True,)
-            _net.add_node(dst, dst, title=dst, group=2*i+1,labelHighlightBold = True,)
-            _net.add_edge(src, dst, value=w, title = _type, arrowStrikethrough=edge_arrow_type)
-            neighbor_map = _net.get_adj_list()
-            
-            # add neighbor data to node hover data
-            for node in _net.nodes:
-                node["value"] = len(neighbor_map[node['id']])*25
-        i+=1
-        _net.add_edge(consignee, shipper, value=1, title = 'actual', arrowStrikethrough=True)
-    # ---------------------------------------------------
-    # Set up the display data for each node
-    # ---------------------------------------------------
+            if _type == 'predicted' and (src==shipper or dst == consignee or dst==shipper or src == consignee ):
+                nx_graph.add_edge(src, dst, weight= w, color='red')
+            else:
+                nx_graph.add_edge(src, dst, weight= w, color='blue')
     
-    def aux(node_id):
-        node_type, _id = node_id.split('-')
-        _ID_, node_descriptor = obtain_node_display_data(node_type, _id)
-        return (node_id,node_descriptor)
-        
-    node_display_str = Parallel(n_jobs=MP.cpu_count(),prefer="threads")(
-        delayed(aux)(node['id'],) for node in _net.nodes
+    largest_cc = max(nx.connected_components(nx_graph), key=len)
+    G = nx_graph.subgraph(largest_cc).copy()
+    
+    net = Network(
+        height=fig_height, 
+        width=fig_width,
+        bgcolor="white", 
+        font_color="black", 
+        notebook=False,
+        heading= title_text
     )
-    node_display_str = {i[0]:i[1] for i in node_display_str}
-    for node in _net.nodes:
-        node_id = node['id']   
-        node['title'] = node_display_str[node_id]
     
-#     _net.set_options('''
-#     var options = {
-#         "physics": {
-#             "barnesHut": {
-#               "gravitationalConstant": -10000,
-#               "centralGravity": 0.15,
-#               "springLength": 750,
-#               "springConstant": 0.10,
-#               "damping": 0.0,
-#               "avoidOverlap": 0.6
-#             },
-#             "maxVelocity": 1,
-#             "minVelocity": 0,
-#             "timestep": 10
-#           }
-#     }
-#     '''
-#     )
+    net.from_nx(G)
+    net.barnes_hut() 
+    net.set_options(
+    """
+    var options = {
+      "nodes": {
+        "borderWidthSelected": 4,
+        "color": {
+          "background": "rgba(163,252,11,1)"
+        }
+      }
+    }
+    """)
     f_path = os.path.join(html_cache, signature_fname)
-    _net.write_html(f_path)
-    return f_path
-
+    net.write_html(f_path)
+    if return_type == 1:
+        return net
+    else:
+        return f_path
+    
 # ==============================================================================
 # initialize(
 #     _DATA_LOC ='./../generated_data_v1/us_import',
-#     _saved_emb_loc =  './saved_model_gnn',
+#     _saved_emb_loc =  './../GNN/saved_model_gnn',
 #     _subDIR = '01_2016',
 #     _html_cache= 'htmlCache',
-#     _df_cache = 'dfCache'
+#     _df_cache = 'dfCache',
+#     db_loc ='/../DB/wwf.db'
 # )
-
-
-# html_path = visualize( PanjivaRecordID ='120901356',fig_width='720px', title=False)
-# html_path = visualize( PanjivaRecordID ='121852671')
+# 
+# html_path = visualize( 
+#     PanjivaRecordID ='120888026',
+#     fig_width='100%', 
+#     title=False, 
+#     fig_height='920px', 
+#     return_type = 2
+# )
 # ==============================================================================
-
-
-
-
