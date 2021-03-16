@@ -30,8 +30,14 @@ def initialize(
     return 
 
 
-
-def get_HSCode_distribution(record_id, return_type=2):
+# ========================================
+# Return Radial sunburst chart for the HSCode breakdown of Consignee and Shipper Respectively
+# In viz set header for Panel as 'HS Code distribution for Consignee' 'HS Code distribution for Shipper'
+# ========================================
+def get_HSCode_distribution(
+    record_id, 
+    return_type=2
+):
     df = pd.read_sql(
                 "select {},{} from Records where {}={}".format(
                     'ConsigneePanjivaID', 'ShipperPanjivaID', 'PanjivaRecordID', record_id
@@ -89,7 +95,6 @@ def get_HSCode_distribution(record_id, return_type=2):
     elif return_type == 2:
         fig_html_c = pio.to_html(fig_c, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
         fig_html_s = pio.to_html(fig_s, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
-
         return fig_html_c, fig_html_s
     
 # ---------------------------------
