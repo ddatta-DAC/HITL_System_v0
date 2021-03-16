@@ -111,7 +111,7 @@ def fetchTS(
             font_family="Courier New",
             font_color="DarkSlateGrey",
             title_font_family="Times New Roman",
-            title_font_color="red",
+            title_font_color="black",
             legend_title_font_color="green",
             font_size=16,
             paper_bgcolor='rgba(255, 255, 255 ,0.5)',
@@ -142,7 +142,7 @@ def fetchTS(
             fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False
         )
         return fpath
-    return fig
+    return
 
 
 
