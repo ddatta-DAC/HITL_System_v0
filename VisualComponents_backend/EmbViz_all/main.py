@@ -40,7 +40,7 @@ def initialize(
     else:
         htmlSaveDir = _htmlSaveDir
     Path(htmlSaveDir).mkdir(exist_ok=True,parents=True )
-    redisUtil.redisStore.ingest_record_data(
+    redis_obj.ingest_record_data(
         DATA_LOC=DATA_LOC,
         subDIR=subDIR
     )
@@ -55,7 +55,7 @@ def initialize(
 
 def get_record_entityEmbeddings(
     PanjivaRecordID,
-    return_type = 3
+    return_type = 2
 ):
     global htmlSaveDir
     record = redis_obj.fetch_data(
@@ -71,14 +71,48 @@ def get_record_entityEmbeddings(
     
     title_text = 'Emmbedding visualization of the Entities of the Record ID {} in 2-Dimension'.format(int(PanjivaRecordID))
     
-    df = pd.DataFrame.from_dict(data_dict, orient='index').reset_index().rename(columns={'index':'domain', 0 :'X-component', 1 :'Y-component'})
-    df['domain'] = df['domain'] .apply(lambda x: x.replace('PanjivaID',''))
+    df = pd.DataFrame.from_dict(data_dict, orient='index').reset_index().rename(columns={'index':'Domain', 0 :'X-component', 1 :'Y-component'})
     
-    fig = px.scatter(df, x= 'X-component', y= 'Y-component', color="domain", text="domain" , title= title_text)
-    fig.update_traces(textposition='top center', mode="markers+text", marker_line_width=2, marker_size=20, textfont_size=18)
-                 
+    df['Domain'] = df['Domain'] .apply(lambda x: x.replace('PanjivaID',''))
+    df['size'] = 12
+    
+    fig = px.scatter(df, x= 'X-component', y= 'Y-component', color="Domain", text="Domain", size='size')
+    fig.update_traces(
+        textposition='top center',
+        mode="markers+text", 
+        marker_line_width=2, 
+        marker_size=15, 
+        textfont_size=18
+    )
+
+    fig.update_layout(
+        autosize=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.01,
+            xanchor="right",
+            x=0.98,
+            title_font_family="Times New Roman",
+            font=dict(
+                family="Courier",
+                size=14.5,
+                color="black"
+            ),
+            bgcolor='rgba(50,205,50,0.15)',
+            bordercolor="Black",
+            borderwidth=2
+        ),
+        font=dict(
+            family="Courier New, monospace",
+            size=15,
+            color="Black"
+        ),
+        plot_bgcolor='rgb(250,250,250)'
+    )
+
     if return_type == 1:
-        return data_dict
+        return df
     elif return_type == 2:
         html_String = pio.to_html(fig, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
         return html_String
