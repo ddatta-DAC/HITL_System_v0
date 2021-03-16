@@ -18,6 +18,7 @@ import plotly.graph_objects as go
 from sqlalchemy import create_engine
 from plotly import io
 from plotly import express as px
+from plotly.graph_objs import Layout
 
 DATA_LOC = None
 subDIR = None
@@ -181,7 +182,7 @@ def get_stackedComparisonPlots(
         if len(data) >= min_count:
             data = data.head(min_count)
             break
-
+        
     vectors_dict = {}
     for domain in domain_dims.keys():
         if domain in ['ConsigneePanjivaID','ShipperPanjivaID']:
@@ -197,11 +198,11 @@ def get_stackedComparisonPlots(
     fig_dict = {}
     bg_colors = [
         'rgba(252, 240, 247,0.35)',
-        'rgba(232, 224, 255,0.25)',
+        'rgba(232, 244, 255,0.25)',
         'rgba(232, 255, 252,0.35)',
-        'rgba(220, 248, 248,0.25)',
+        'rgba(230, 248, 248,0.25)',
         'rgba(251, 255, 232,0.35)',
-        'rgba(255, 237, 232,0.25)'
+        'rgba(252, 251, 232,0.25)'
     ]
     i = 0
     for domain in domain_dims.keys():
@@ -216,36 +217,63 @@ def get_stackedComparisonPlots(
             y = _vectors[:,1]
         )
 
-        fig.add_trace(
-            go.Scatter(
-            x=target_entity_vec[:,0],
-            y=target_entity_vec[:,1],
-            mode="markers+text",
-            marker = dict(
-            color = 'rgba(230,0,10,0.75)',
-                size = 15
-            ),
-            text=["Record Entity"],
-            )
-        )
+       
         fig.update_layout(showlegend=False)
         sub_figure = go.Scatter(
             x = _vectors[:,0],
             y = _vectors[:,1],
             mode = 'markers',
             marker = dict(
-                color = 'rgba(10,0,225,0.35)',
-                size = 10
+                color = 'rgb(163, 255, 71,0.20)',
+                size = 10,
+                line=dict(
+                color='MediumPurple',
+                    width=2
+                )
             )
         )
-
+        
+        fig.add_trace(
+            go.Scatter(
+            x=target_entity_vec[:,0],
+            y=target_entity_vec[:,1],
+            mode="markers+text",
+            marker = dict(
+                color = 'rgba(230,0,10,0.95)',
+                size = 15,
+                line=dict(
+                color='Yellow',
+                    width=2
+                )
+            ),
+            text=["Entity"],
+            )
+        )
+        range_x = np.max(_vectors[:,0]) - np.min(_vectors[:,0])
+        range_y = np.max(_vectors[:,1]) - np.min(_vectors[:,1])
+        r1 = 0.04*range_x
+        r2 = 0.04*range_y
+        x0 =target_entity_vec[:,0][0]
+        y0 =target_entity_vec[:,1][0]
+        x1 = x0 - r1
+        x2 = x0 + r1
+        y1 = y0 - r2
+        y2 = y0 + r2
+        print(x1,x2,y1,y2)
+        fig.add_shape(
+            type="rect",
+            x0=x1, y0=y1, x1=x2, y1=y2,
+            line=dict( width=2, color="rgba(230,0,10,0.95)"),
+        )
+            
         fig.add_trace(
             sub_figure
         )
         fig.update_xaxes(tickfont=dict(color='black', size=15))
         fig.update_yaxes(tickfont=dict(color='black', size=15))
         fig.update_layout(showlegend=False)
-        from plotly.graph_objs import Layout
+        
+        
         layout = Layout(
             paper_bgcolor=bg_colors[i],
             plot_bgcolor='rgba(0,0,0,0.05)'
@@ -253,6 +281,8 @@ def get_stackedComparisonPlots(
 
         fig.update_layout(layout)
         fig.update_layout(xaxis_showgrid=True, yaxis_showgrid=True)
+        fig.update_layout(height=300, width=360)
+        fig.update_layout(margin = dict(t=0, l=0, r=0, b=0))
         fig_dict[domain] = fig
         i+=1
     if return_type==1:
@@ -267,6 +297,7 @@ def get_stackedComparisonPlots(
 # ===========================
 # Example code
 # ===========================
+
 '''
 initialize(
     _DATA_LOC = './../generated_data_v1/us_import',
@@ -277,17 +308,11 @@ initialize(
 )
 
 
-get_stackedComparisonPlots(
-    record_id, 
-    min_count = 500
-)
-
 fig_dict = get_stackedComparisonPlots(
     record_id='121888536', 
     min_count = 1000, 
     return_type=1
 )
-
 
 '''
 
