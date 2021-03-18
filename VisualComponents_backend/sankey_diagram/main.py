@@ -145,6 +145,7 @@ def get_sankey_diagram(
 
     fig = None
     fig_json_fname = 'Sankey_{}_{}'.format(PanjivaRecordID, diagram_type) + '.json'
+    print(json_saveDir)
     fig_json_path = os.path.join(json_saveDir, fig_json_fname)
 
     if use_cache and os.path.exists(fig_json_path):
@@ -158,7 +159,7 @@ def get_sankey_diagram(
         # -----------------------
         df = obtain_data(
             PanjivaRecordID,
-            diagram_type=1
+            diagram_type=diagram_type
         )
 
         if diagram_type == 1:
