@@ -83,7 +83,7 @@ def get_HSCode_distribution(
     fig_s.show()
 
 
-    fig_c = px.sunburst(df_shipper, path=['HSCode_2', 'HSCode_4', 'HSCode'], values='count')
+    fig_c = px.sunburst(df_consignee, path=['HSCode_2', 'HSCode_4', 'HSCode'], values='count')
     fig_c.update_layout(
         uniformtext=dict(minsize=16, mode='hide')
     )
