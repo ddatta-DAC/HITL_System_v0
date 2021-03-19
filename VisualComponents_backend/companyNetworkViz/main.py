@@ -289,8 +289,7 @@ def visualize(
     
     # -----------------------
     record = redis_obj.fetch_data(str(PanjivaRecordID))
-    print('record >>', record)
-    
+        
     consignee = 'ConsigneePanjivaID-' + str(record['ConsigneePanjivaID'])
     shipper = 'ShipperPanjivaID-' + str(record['ShipperPanjivaID'])
     
@@ -392,7 +391,10 @@ def visualize(
     if return_type == 1:
         return net
     else:
-        return f_path
+        f = open("demofile.txt", "r")
+        _html_ = f.read()
+        f.close()
+        return _html_
     
 # ==============================================================================
 # initialize(

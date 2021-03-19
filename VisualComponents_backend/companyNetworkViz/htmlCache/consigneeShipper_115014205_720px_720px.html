@@ -1,0 +1,108 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 720px;
+            height: 720px;
+            background-color: white;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"font": {"color": "black"}, "id": "ConsigneePanjivaID-1253", "label": "ConsigneePanjivaID-1253", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-6669", "label": "ShipperPanjivaID-6669", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ConsigneePanjivaID-2697", "label": "ConsigneePanjivaID-2697", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ConsigneePanjivaID-3597", "label": "ConsigneePanjivaID-3597", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ConsigneePanjivaID-4364", "label": "ConsigneePanjivaID-4364", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ConsigneePanjivaID-4767", "label": "ConsigneePanjivaID-4767", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ConsigneePanjivaID-5085", "label": "ConsigneePanjivaID-5085", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-1287", "label": "ShipperPanjivaID-1287", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2126", "label": "ShipperPanjivaID-2126", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-5085", "label": "ShipperPanjivaID-5085", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2015", "label": "ShipperPanjivaID-2015", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-248", "label": "ShipperPanjivaID-248", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2851", "label": "ShipperPanjivaID-2851", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-5090", "label": "ShipperPanjivaID-5090", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-5784", "label": "ShipperPanjivaID-5784", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2928", "label": "ShipperPanjivaID-2928", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2059", "label": "ShipperPanjivaID-2059", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-1065", "label": "ShipperPanjivaID-1065", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-374", "label": "ShipperPanjivaID-374", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-5381", "label": "ShipperPanjivaID-5381", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-864", "label": "ShipperPanjivaID-864", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-5493", "label": "ShipperPanjivaID-5493", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-657", "label": "ShipperPanjivaID-657", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-140", "label": "ShipperPanjivaID-140", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2680", "label": "ShipperPanjivaID-2680", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-4906", "label": "ShipperPanjivaID-4906", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-2171", "label": "ShipperPanjivaID-2171", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-581", "label": "ShipperPanjivaID-581", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-4754", "label": "ShipperPanjivaID-4754", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-514", "label": "ShipperPanjivaID-514", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-1509", "label": "ShipperPanjivaID-1509", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-767", "label": "ShipperPanjivaID-767", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-626", "label": "ShipperPanjivaID-626", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-840", "label": "ShipperPanjivaID-840", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-362", "label": "ShipperPanjivaID-362", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-1008", "label": "ShipperPanjivaID-1008", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-1635", "label": "ShipperPanjivaID-1635", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-3150", "label": "ShipperPanjivaID-3150", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-3176", "label": "ShipperPanjivaID-3176", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-3376", "label": "ShipperPanjivaID-3376", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-3456", "label": "ShipperPanjivaID-3456", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-3717", "label": "ShipperPanjivaID-3717", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-4166", "label": "ShipperPanjivaID-4166", "shape": "dot", "size": 10}, {"font": {"color": "black"}, "id": "ShipperPanjivaID-4306", "label": "ShipperPanjivaID-4306", "shape": "dot", "size": 10}]);
+        edges = new vis.DataSet([{"from": "ConsigneePanjivaID-1253", "to": "ShipperPanjivaID-6669", "weight": 2}, {"from": "ShipperPanjivaID-6669", "to": "ConsigneePanjivaID-2697", "weight": 6}, {"from": "ShipperPanjivaID-6669", "to": "ConsigneePanjivaID-3597", "weight": 2}, {"from": "ShipperPanjivaID-6669", "to": "ConsigneePanjivaID-4364", "weight": 3}, {"from": "ShipperPanjivaID-6669", "to": "ConsigneePanjivaID-4767", "weight": 2}, {"from": "ShipperPanjivaID-6669", "to": "ConsigneePanjivaID-5085", "weight": 1}, {"from": "ConsigneePanjivaID-4364", "to": "ShipperPanjivaID-1287", "weight": 1}, {"from": "ConsigneePanjivaID-4364", "to": "ShipperPanjivaID-2126", "weight": 3}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-1287", "weight": 6}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2126", "weight": 3}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-5085", "weight": 0.2716507911682129}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2015", "weight": 0.4648192226886749}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-248", "weight": 0.4323870241641998}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2851", "weight": 0.4287690222263336}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-5090", "weight": 0.4292157292366028}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-5784", "weight": 0.4848494231700897}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2928", "weight": 0.4732879400253296}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2059", "weight": 0.0681704506278038}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-1065", "weight": 0.4161953628063202}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-374", "weight": 0.4055404365062713}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-5381", "weight": 0.4297771751880646}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-864", "weight": 0.4451508820056915}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-5493", "weight": 0.3999603688716888}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-657", "weight": 0.4264694154262543}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-140", "weight": 0.3978956341743469}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2680", "weight": 0.434585839509964}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-4906", "weight": 0.4120095074176788}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-2171", "weight": 0.3812273740768432}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-581", "weight": 0.3755777478218078}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-4754", "weight": 0.3748525083065033}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-514", "weight": 0.0897909328341484}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-1509", "weight": 0.2513518035411834}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-767", "weight": 0.4993784725666046}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-626", "weight": 0.2552125751972198}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-840", "weight": 0.2476316690444946}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-362", "weight": 0.6240183115005493}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-1008", "weight": 0.4224999248981476}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-1635", "weight": 0.5433741211891174}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-3150", "weight": 0.4843209683895111}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-3176", "weight": 0.5918439626693726}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-3376", "weight": 0.3263252973556518}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-3456", "weight": 0.3921239674091339}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-3717", "weight": 0.5273709893226624}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-4166", "weight": 0.4581793844699859}, {"from": "ConsigneePanjivaID-5085", "to": "ShipperPanjivaID-4306", "weight": 0.6316024661064148}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": false,
+            "type": "continuous"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>
