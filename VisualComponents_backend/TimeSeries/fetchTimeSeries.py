@@ -97,7 +97,7 @@ def fetchTS(
             df,
             x="Date",
             hover_data={"Date": "|%B "},
-            title=title,
+            title=None,
             color_continuous_scale= px.colors.sequential.Rainbow,
         )
         fig.update_xaxes(
