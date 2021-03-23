@@ -1,6 +1,5 @@
 import pandas as pd
-%load_ext autoreload
-%autoreload 2
+
 import plotly.express as px
 import pandas as pd
 import sys
