@@ -1,7 +1,6 @@
 import pandas as pd
-%load_ext autoreload
-%autoreload 2
 
+import plotly.express as px
 import pandas as pd
 import sys
 import os
@@ -80,7 +79,6 @@ def get_HSCode_distribution(
         uniformtext=dict(minsize=16, mode='hide')
     )
     fig_s.update_layout(margin = dict(t=0, l=0, r=0, b=0))
-    fig_s.show()
 
 
     fig_c = px.sunburst(df_consignee, path=['HSCode_2', 'HSCode_4', 'HSCode'], values='count')
