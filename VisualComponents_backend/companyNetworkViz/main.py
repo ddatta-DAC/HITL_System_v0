@@ -205,10 +205,13 @@ def initialize(
 ):
     global DATA_LOC, subDIR, anomaly_result_dir, redis_obj, column_values2id, NN_count, df_cache, html_cache, saved_emb_loc, SQL_conn
     anomaly_result_dir = _anomaly_result_dir
+    
+    print(os.path.exists(db_loc) , os.getcwd())
     SQL_conn = create_engine(
         'sqlite:///{}'.format(db_loc),
         echo=False
     )
+    print(SQL_conn)
     DATA_LOC = _DATA_LOC
     subDIR = _subDIR
     saved_emb_loc = _saved_emb_loc
@@ -287,7 +290,7 @@ def __preload__(count=2500):
     global DATA_LOC, subDIR, anomaly_result_dir, ID_col
     cpu_count = MP.cpu_count()
     # fetch the record ids
-
+    print(anomaly_result_dir, subDIR)
     ad_result = pd.read_csv(
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
@@ -297,9 +300,11 @@ def __preload__(count=2500):
     df = samples.head(count).copy(deep=True)
     del df['score']
     recordID_list = df[ID_col].tolist()
-
+    
+    for id in tqdm(recordID_list):
+        visualize(int(id))
     Parallel(n_jobs=cpu_count)(
-        delayed(visualize)(id) for id in tqdm(recordID_list)
+        delayed(visualize)(int(id)) for id in tqdm(recordID_list)
     )
     return df
 
@@ -331,7 +336,7 @@ def visualize(
 
     # -----------------------
     record = redis_obj.fetch_data(str(PanjivaRecordID))
-
+    
     consignee = 'ConsigneePanjivaID-' + str(record['ConsigneePanjivaID'])
     shipper = 'ShipperPanjivaID-' + str(record['ShipperPanjivaID'])
 
@@ -430,10 +435,11 @@ def visualize(
         """)
     f_path = os.path.join(html_cache, signature_fname)
     net.write_html(f_path)
+    
     if return_type == 1:
         return net
     else:
-        f = open("demofile.txt", "r")
+        f = open(f_path, "r")
         _html_ = f.read()
         f.close()
         return _html_
@@ -443,11 +449,12 @@ def visualize(
 #     _DATA_LOC ='./../generated_data_v1/us_import',
 #     _saved_emb_loc =  './../GNN/saved_model_gnn',
 #     _subDIR = '01_2016',
-#     _html_cache= 'htmlCache',
-#     _df_cache = 'dfCache',
+#     _html_cache= 'networkViz_htmlCache',
+#     _df_cache = 'networkViz_dfCache',
 #     db_loc ='/../DB/wwf.db',
 #     anomaly_result_dir = './../AD_model/combined_output'
 # )
+# __preload__()
 # 
 # html_path = visualize( 
 #     PanjivaRecordID ='120888026',
