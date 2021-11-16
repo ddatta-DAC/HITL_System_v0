@@ -13,6 +13,10 @@ import pandas as pd
 import sys
 import plotly.graph_objects as go
 from plotly import io
+from glob import glob
+import multiprocessing as MP
+from joblib import Parallel,delayed
+from tqdm import tqdm 
 
 sys.path.append('./..')
 sys.path.append('./../..')
@@ -25,7 +29,8 @@ html_saveDir = None
 DATA_LOC = None
 subDIR = None
 json_saveDir = None
-
+anomaly_result_dir = None
+ID_col = 'PanjivaRecordID'
 '''
 #================================================
 In both cases the anchoring element is HSCode
@@ -41,14 +46,15 @@ Call this function with import
 _html_saveDir is a cache where the figures can be stored
 '''
 
-
 def initialize(
         _DATA_LOC=None,
         _subDIR=None,
         _html_saveDir=None,
-        _json_saveDir =None
+        _json_saveDir =None,
+        _anomaly_result_dir = None
 ):
-    global redis_obj, DATA_LOC, subDIR, html_saveDir, json_saveDir
+    global redis_obj, DATA_LOC, subDIR, html_saveDir, json_saveDir,  anomaly_result_dir 
+    anomaly_result_dir = _anomaly_result_dir
     DATA_LOC = _DATA_LOC
     subDIR = _subDIR
     redis_obj.ingest_record_data(DATA_LOC, subDIR)
@@ -56,14 +62,42 @@ def initialize(
         html_saveDir = './Cache_sankeyHTML'
     else:
         html_saveDir = _html_saveDir
-    
-    Path(_html_saveDir).mkdir(exist_ok=True, parents=True)
+    html_saveDir = html_saveDir + '_' + _subDIR
+    Path(html_saveDir).mkdir(exist_ok=True, parents=True)
     if _json_saveDir is None:
         json_saveDir = './jsonCache'
     else:
         json_saveDir = _json_saveDir
 
     Path(json_saveDir).mkdir(exist_ok=True, parents=True)
+    return
+
+'''
+Preload function to fetch and store results
+'''
+def __preload__(count=1000):
+    global DATA_LOC, subDIR, anomaly_result_dir, ID_col
+    cpu_count = MP.cpu_count()
+    # fetch the record ids
+    ad_result = pd.read_csv(
+        os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
+    )
+    samples = ad_result.rename(columns={'rank': 'score'})
+    samples = samples.sort_values(by='score', ascending=True)
+    count = min(len(samples) // 3, count)
+    df = samples.head(count).copy(deep=True)
+    del df['score']
+    recordID_list = df[ID_col].astype(int).tolist()
+    
+#     for id in tqdm(recordID_list):
+#         get_record_entityEmbeddings(int(id))
+    
+    Parallel(n_jobs=cpu_count, prefer="threads")(
+        delayed(get_sankey_diagram)(int(id),1,) for id in tqdm(recordID_list)
+    )
+    Parallel(n_jobs=cpu_count, prefer="threads")(
+        delayed(get_sankey_diagram)(int(id),2,) for id in tqdm(recordID_list)
+    )
     return
 
 
@@ -119,7 +153,7 @@ def obtain_data(
 '''
 return_type:
 1 : Return plotly figure
-2 : Return html
+2 : Return html [preferred]
 3 : Write to HTML and return the file name
  
 link_count_upper_bound 
@@ -134,7 +168,7 @@ def get_sankey_diagram(
         PanjivaRecordID,
         diagram_type=1,
         link_count_upper_bound=100,
-        return_type=1,
+        return_type=2,
         fig_height=600,
         use_cache=True
 ):
@@ -145,10 +179,18 @@ def get_sankey_diagram(
 
     fig = None
     fig_json_fname = 'Sankey_{}_{}'.format(PanjivaRecordID, diagram_type) + '.json'
-    print(json_saveDir)
     fig_json_path = os.path.join(json_saveDir, fig_json_fname)
-
-    if use_cache and os.path.exists(fig_json_path):
+    
+    fname = 'Sankey_{}_{}'.format(PanjivaRecordID, diagram_type) + '.html'
+    fpath = os.path.join(html_saveDir, fname)
+    
+    if use_cache and os.path.exists(fpath) and return_type == 2 :
+        fh = open(fpath, 'r')
+        html_content = fh.read()
+        fh.close()
+        return html_content
+    
+    if use_cache and os.path.exists(fig_json_path) :
         with open(fig_json_path, 'r') as f:
             fig = io.from_json(f.read())
 
@@ -252,6 +294,12 @@ def get_sankey_diagram(
     if return_type == 1:
         return fig
     elif return_type == 2:
+        fname = 'Sankey_{}_{}'.format(PanjivaRecordID, diagram_type) + '.html'
+        fpath = os.path.join(html_saveDir, fname)
+        fig.write_html(
+            fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False
+        )
+        
         html_String = io.to_html(fig, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
         return html_String
     elif return_type == 3:

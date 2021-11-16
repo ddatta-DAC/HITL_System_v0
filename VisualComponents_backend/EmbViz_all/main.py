@@ -46,6 +46,7 @@ def initialize(
         htmlSaveDir = './htmlCache'
     else:
         htmlSaveDir = _htmlSaveDir
+    htmlSaveDir = htmlSaveDir + '_' + _subDIR
     Path(htmlSaveDir).mkdir(exist_ok=True,parents=True )
     redis_obj.ingest_record_data(
         DATA_LOC=DATA_LOC,
@@ -78,12 +79,12 @@ def __preload__(count=1000):
     del df['score']
     recordID_list = df[ID_col].astype(int).tolist()
     
-    for id in tqdm(recordID_list):
-        get_record_entityEmbeddings(int(id))
+#     for id in tqdm(recordID_list):
+#         get_record_entityEmbeddings(int(id))
     
-#     Parallel(n_jobs=cpu_count)(
-#         delayed(get_record_entityEmbeddings)(int(id)) for id in tqdm(recordID_list)
-#     )
+    Parallel(n_jobs=cpu_count, prefer="threads")(
+        delayed(get_record_entityEmbeddings)(int(id)) for id in tqdm(recordID_list)
+    )
     return  
     
 
