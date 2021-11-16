@@ -219,7 +219,7 @@ def initialize(
     with open(os.path.join(DATA_LOC, subDIR, 'col_val2id_dict.pkl'), 'rb') as fh:
         column_values2id = pickle.load(fh)
     df_cache = _df_cache
-    html_cache = _html_cache
+    html_cache = _html_cache + '_' + _subDIR
     Path(df_cache).mkdir(exist_ok=True, parents=True)
     Path(html_cache).mkdir(exist_ok=True, parents=True)
     redis_obj.ingest_record_data(DATA_LOC, subDIR)

@@ -9,6 +9,12 @@ from pathlib import Path
 from redisStore import redisUtil
 sys.path.append('./../..')
 from DB_Ingestion.sqlite_engine import sqlite
+from tqdm import tqdm 
+import multiprocessing as MP
+import joblib
+from joblib import Parallel, delayed
+from glob import glob
+
 
 SQL_conn = sqlite().get_engine()
 DATA_LOC = None
@@ -17,14 +23,19 @@ html_saveDir = None
 json_saveDir = None
 
 redis_obj = redisUtil.redisStore
+anomaly_result_dir = None
+ID_col = 'PanjivaRecordID'
+
 
 def initialize(
         _DATA_LOC=None,
         _subDIR=None,
         _html_saveDir=None,
-        _json_saveDir=None
+        _json_saveDir=None,
+        _anomaly_result_dir = None
 ):
-    global redis_obj, DATA_LOC, subDIR, html_saveDir, json_saveDir
+    global redis_obj, DATA_LOC, subDIR, html_saveDir, json_saveDir, anomaly_result_dir
+    anomaly_result_dir = _anomaly_result_dir
     
     DATA_LOC = _DATA_LOC
     subDIR = _subDIR
@@ -32,14 +43,37 @@ def initialize(
 
     if _html_saveDir is None:
         _html_saveDir = './htmlCache'
-    html_saveDir = _html_saveDir
-    Path(_html_saveDir).mkdir(exist_ok=True, parents=True)
+    html_saveDir = _html_saveDir + '_' + _subDIR
+    
+    Path(html_saveDir).mkdir(exist_ok=True, parents=True)
     if _json_saveDir is None:
         json_saveDir = './jsonCache'
     else:
         json_saveDir = _json_saveDir
 
     Path(json_saveDir).mkdir(exist_ok=True, parents=True)
+    return
+
+'''
+Preload function to fetch and store results
+'''
+def __preload__(count=1000):
+    global DATA_LOC, subDIR, anomaly_result_dir, ID_col
+    cpu_count = MP.cpu_count()
+    # fetch the record ids
+    ad_result = pd.read_csv(
+        os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
+    )
+    samples = ad_result.rename(columns={'rank': 'score'})
+    samples = samples.sort_values(by='score', ascending=True)
+    count = min(len(samples) // 3, count)
+    df = samples.head(count).copy(deep=True)
+    del df['score']
+    recordID_list = df[ID_col].astype(int).tolist()
+
+    Parallel(n_jobs=cpu_count, prefer="threads")(
+        delayed(get_TimeSeries)(int(id)) for id in tqdm(recordID_list)
+    )
     return
 
 
@@ -63,20 +97,29 @@ def fetchTS(
         table='Records',
         title=None,
         use_cache=True,
-        return_type=3
+        return_type=2
 ):
     global SQL_conn
     global DATA_LOC
     global subDIR
     global html_saveDir, json_saveDir
     
-    signature = 'TimeSeries_{}_{}'.format(domain, id)
+    signature = 'TimeSeries_{}_{}'.format(domain, _id)
     json_fpath = os.path.join(json_saveDir, signature + '.json')
     fig = None
-
+    
+    fname = signature + '.html'
+    fpath = os.path.join(html_saveDir, fname)
+    
     if use_cache and os.path.exists(json_fpath):
         with open(json_fpath, 'r') as f:
             fig = pio.from_json(f.read())
+    
+    if use_cache and os.path.exists(fpath) and return_type == 2:
+        fh = open(fpath,'r')
+        html_content = fh.read()
+        fh.close()
+        return html_content
     
     if fig is None:
         df = pd.read_sql(
@@ -129,18 +172,19 @@ def fetchTS(
             fname = signature + '.json'
             with open(json_fpath, 'w') as f:
                 f.write(fig_json)
+    
 
+    if not os.path.exists(fpath):
+        fig.write_html(
+            fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False
+        )
+        
     if return_type == 1:
         return fig
     elif return_type == 2:
         html_String = pio.to_html(fig, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
         return html_String
     elif return_type == 3:
-        fname = signature + '.html'
-        fpath = os.path.join(html_saveDir, fname)
-        fig.write_html(
-            fpath, include_plotlyjs='cdn', include_mathjax='cdn', full_html=False
-        )
         return fpath
     return
 
@@ -156,8 +200,9 @@ def get_TimeSeries(
     global subDIR
     
     df = pd.read_sql(
-            "select {},{},{} from Records where {}={}".format('PanjivaRecordID', 'ConsigneePanjivaID', 'ShipperPanjivaID', 'PanjivaRecordID', str(int(PanjivaRecordID))), SQL_conn,
-            index_col=None
+            "select {},{},{} from Records where {}={}".format(
+                'PanjivaRecordID', 'ConsigneePanjivaID', 'ShipperPanjivaID', 'PanjivaRecordID', 
+                str(int(PanjivaRecordID))), SQL_conn, index_col=None
     )
     consignee = str(int(df['ConsigneePanjivaID'].values[0]))
     shipper = str(int(df['ShipperPanjivaID'].values[0]))
@@ -189,7 +234,8 @@ TS.initialize(
     _DATA_LOC='./../generated_data_v1/us_import',
     _subDIR='01_2016',
     _html_saveDir='./htmlCacheDir',
-    _json_saveDir='./jsonCacheDir
+    _json_saveDir='./jsonCacheDir,
+    _anomaly_result_dir = './../AD_model/combined_output'
     
 )
 html_path_1, html_path_2 = TS.get_TimeSeries(PanjivaRecordID = '106645949',use_cache=False)
