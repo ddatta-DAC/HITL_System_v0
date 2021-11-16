@@ -89,8 +89,7 @@ def __preload__(count=1000):
     del df['score']
     recordID_list = df[ID_col].astype(int).tolist()
     
-#     for id in tqdm(recordID_list):
-#         get_record_entityEmbeddings(int(id))
+
     
     Parallel(n_jobs=cpu_count, prefer="threads")(
         delayed(get_sankey_diagram)(int(id),1,) for id in tqdm(recordID_list)
@@ -322,6 +321,8 @@ sankey.initialize(
     _subDIR='01_2016',
     _html_saveDir=htmlCacheDir,
     _json_saveDir=jsonCacheDir,
+    _anomaly_result_dir = './../AD_model/combined_output'
+    
 )
 
 # [NOTE] :: needs to have 2 calls
