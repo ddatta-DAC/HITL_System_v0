@@ -247,6 +247,7 @@ class data_handler:
         keys = list( self.entityInteraction_pairs.keys())
         for domain_pair in itertools.combinations(domain_list, 2):
             keys.append('_'.join(list(sorted(domain_pair))))
+
         record_row_dict = record_row.to_dict()
         print('get_domainPairInteractionsRegistered::', record_row)
         def aux(key):

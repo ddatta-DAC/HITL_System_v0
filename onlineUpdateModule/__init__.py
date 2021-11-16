@@ -3,3 +3,4 @@ import numpy as np
 import os, sys
 sys.path.append('./.')
 sys.path.append('./..')
+from . import data_handler
