@@ -277,20 +277,18 @@ def obtain_node_display_data(
     count = int(10 + (np.log10(count) + 1) * 2)
     return __ID__, display_str, count
 
-
+# ===============================================================
 '''
 Function to preload everything into a cache
 In this case on disk : html_cache
 The idea is to precalculate viz html for top-K records in each epoch 
 '''
 
-
-def __preload__(count=2500):
-    from onlineUpdateModule import data_handler
+def __preload__(count=1000):
+    
     global DATA_LOC, subDIR, anomaly_result_dir, ID_col
     cpu_count = MP.cpu_count()
     # fetch the record ids
-    print(anomaly_result_dir, subDIR)
     ad_result = pd.read_csv(
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
@@ -301,8 +299,8 @@ def __preload__(count=2500):
     del df['score']
     recordID_list = df[ID_col].tolist()
     
-    for id in tqdm(recordID_list):
-        visualize(int(id))
+#     for id in tqdm(recordID_list):
+#         visualize(int(id))
     Parallel(n_jobs=cpu_count)(
         delayed(visualize)(int(id)) for id in tqdm(recordID_list)
     )
