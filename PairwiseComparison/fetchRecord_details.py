@@ -66,17 +66,20 @@ def initialize(
         DATA_LOC=DATA_LOC,
         subDIR=subDIR
     )
-    
+    print('Ingesting into redis ...')
     redis_obj.ingest_pairWiseDist(
         data_dir = pairWiseDist_data_dir ,
         subDIR = subDIR
     )
+    domain_dims = get_domain_dims(subDIR)
     return
 
 def setupGlobals(
-   _DATA_LOC
+   _DATA_LOC,
 ): 
     global DATA_LOC
+    global subDIR
+    
     DATA_LOC = _DATA_LOC
     return 
 
@@ -88,14 +91,16 @@ def setupGlobals(
 # while this id is global ;
 # =============================
 def fetchRecord_details(
-        id = None,
+        _id = None,
         subDIR = None,
         emb_source = 'AD'
 ):
 
     redis_obj = redisUtil.redisStore
+    print(redis_obj)
     ID_COL = 'PanjivaRecordID'
-    record_dict = redis_obj.fetch_data(key=str(int(id)))
+    record_dict = redis_obj.fetch_data(key=str(int(_id)))
+    print(record_dict)
     domain_dims = get_domain_dims(subDIR)
     result = []
 
