@@ -21,7 +21,12 @@ from itertools import combinations
 from pathlib import Path
 from redisStore import redisUtil
 from utils import utils
+import multiprocessing as MP
+from joblib import Parallel, delayed 
+from tqdm import tqdm 
+from glob import glob 
 
+# ------------------------------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 idMapping_df = None
@@ -31,7 +36,11 @@ mapping_dict = None
 op_save_dir = None
 redis_obj = redisUtil.redisStore
 DATA_LOC = None
+anomaly_result_dir = None
+result_pkl_cacheDir = None
+subDIR = None
 
+# -------------------------------------------------------------------------
 
 def get_domain_dims(
         subDIR
@@ -49,7 +58,10 @@ def get_domain_dims(
 def initialize(
     data_dir, 
     pairWiseDist_data_dir,
-    subDIR
+    _subDIR,
+    _anomaly_result_dir,
+    _result_pkl_cacheDir = 'pkl_Cache',
+    load_redis = False
 ):
     global config
     global saved_model_dir
@@ -59,19 +71,29 @@ def initialize(
     global op_save_dir
     global DATA_LOC
     global redis_obj
+    global anomaly_result_dir
+    global result_pkl_cacheDir
+    global subDIR
     
     DATA_LOC = data_dir
+    subDIR = _subDIR
+    anomaly_result_dir = _anomaly_result_dir
+    print(_result_pkl_cacheDir, _subDIR)
+    result_pkl_cacheDir = _result_pkl_cacheDir + '_' + _subDIR
+    
+    Path(result_pkl_cacheDir).mkdir(exist_ok=True, parents=True)
     
     redis_obj.ingest_record_data(
         DATA_LOC=DATA_LOC,
-        subDIR=subDIR
-    )
-    print('Ingesting into redis ...')
-    redis_obj.ingest_pairWiseDist(
-        data_dir = pairWiseDist_data_dir ,
         subDIR = subDIR
     )
-    domain_dims = get_domain_dims(subDIR)
+    print('Ingesting into redis ...')
+    if load_redis:
+        print('[Not loading REDIS!!!! ] can cause errors if results not cached')
+        redis_obj.ingest_pairWiseDist(
+            data_dir = pairWiseDist_data_dir,
+            subDIR = subDIR
+        )
     return
 
 def setupGlobals(
@@ -79,9 +101,31 @@ def setupGlobals(
 ): 
     global DATA_LOC
     global subDIR
-    
     DATA_LOC = _DATA_LOC
     return 
+
+def __preload__(count=1000):
+    
+    global DATA_LOC, subDIR, anomaly_result_dir, ID_COL
+    
+    cpu_count = MP.cpu_count()
+    # fetch the record ids
+    ad_result = pd.read_csv(
+        os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
+    )
+    samples = ad_result.rename(columns={'rank': 'score'})
+    samples = samples.sort_values(by='score', ascending=True)
+    count = min(len(samples) // 3, count)
+    df = samples.head(count).copy(deep=True)
+    del df['score']
+    recordID_list = df[ID_COL].tolist()
+    
+#     for id in tqdm(recordID_list):
+#         get_stackedComparisonPlots(int(id))
+    Parallel(n_jobs=cpu_count, prefer="threads")(
+        delayed(fetchRecord_details)(int(id)) for id in tqdm(recordID_list)
+    )
+    return df
 
 
 # =============================
@@ -91,16 +135,23 @@ def setupGlobals(
 # while this id is global ;
 # =============================
 def fetchRecord_details(
-        _id = None,
-        subDIR = None,
+        record_id = None,
         emb_source = 'AD'
 ):
-
+    global subDIR, ID_COL, result_pkl_cacheDir
+    file_signature  = '{}_pairwiseDist.pkl'.format(int(record_id))
+    fpath = os.path.join(result_pkl_cacheDir, file_signature)
+    
+    if os.path.exists(fpath):
+        print('Cached')
+        with open(fpath,'rb') as fh:
+            result = pickle.load(fh)
+            return result
+        
     redis_obj = redisUtil.redisStore
-    print(redis_obj)
     ID_COL = 'PanjivaRecordID'
-    record_dict = redis_obj.fetch_data(key=str(int(_id)))
-    print(record_dict)
+    record_dict = redis_obj.fetch_data(key=str(int(record_id)))
+    
     domain_dims = get_domain_dims(subDIR)
     result = []
 
@@ -113,6 +164,9 @@ def fetchRecord_details(
         r = redis_obj.fetch_data(key)
         result.append(({d1:e1}, {d2:e2},float(r.decode())))
     result = list(sorted(result, key = lambda x: x[2], reverse=True))
+    
+    with open(fpath,'wb') as fh:
+        pickle.dump(result, fh, pickle.HIGHEST_PROTOCOL)
     return result
 
 
