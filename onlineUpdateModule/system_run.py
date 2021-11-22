@@ -104,6 +104,7 @@ class onlineUpdateExecutor:
     def __build__(
             self
     ):
+        global serialID_mapping_loc
         data_handler_object = self.data_handler_object
         self.ID_COL = 'PanjivaRecordID'
         # -----------------------
@@ -112,7 +113,7 @@ class onlineUpdateExecutor:
         # data_handler_object =  data_handler()
         
         embedding_data_path = data_handler_object.embedding_data_path
-        global serialID_mapping_loc
+
 
         # setup objects
         serialID_to_entityID = data_handler_object.get_serialID_to_entityID()
@@ -121,13 +122,16 @@ class onlineUpdateExecutor:
             serialID_to_entityID,
             _normalize=True
         )
+
+        print('[Debug] >>>> `record` class set up')
         emb_dim = record_class.embedding['HSCode'].shape[1]
         self.emb_dim = emb_dim
-        print('Embedding Dimension', emb_dim)
+        print('[Debug] >>>> Embedding dimension', emb_dim)
         
         # main_data_df has the records with entity ids
         main_data_df = data_handler_object.get_working_records()
-        
+        print('[Debug] >>>> Data obtained ( working records) ', len(main_data_df))
+
         # -------------------------------------------
         obj_list = []
         main_data_df[self.ID_COL] = main_data_df[self.ID_COL].astype(int)
@@ -141,6 +145,7 @@ class onlineUpdateExecutor:
                 is_unserialized=True
             )
             obj_list.append(obj)
+        print('[Debug] >>>> Record objects created ', len(obj_list))
 
         domain_dims = data_handler_object.domain_dims
         self.domain_dims = domain_dims
@@ -184,9 +189,10 @@ class onlineUpdateExecutor:
         # -------------------------------------------------------
 
         self.classifier_obj = onlineUpdateExecutor.__get_trained_classifier__(X, y, domain_dims, emb_dim)
+        print('[Debug] >>>> self.classifier_obj created ')
         # Initial weights
         self.W_initial = self.classifier_obj.W.cpu().data.numpy()
-
+        print('[Debug] >>>> self.W_initial initialized ')
         # Create a reference dataframe  :: data_reference_df
         data_reference_df = pd.DataFrame(
             data=data_id,
@@ -227,6 +233,7 @@ class onlineUpdateExecutor:
         self.data_reference_df['label'] = 0
 
         self.unprocessed_recordID_list = []
+        print('[Debug] >>>> Creating GD object ')
         self.OGD_obj = onlineGD(
             num_coeff=self.num_coeff,
             emb_dim=self.emb_dim,
@@ -234,7 +241,9 @@ class onlineUpdateExecutor:
             interaction_type=self.interaction_type,
             learning_rate= 0.05
         )
+        print('[Debug] >>>> Successfully created GD object ')
         self.OGD_obj.set_original_W(self.W_initial)
+        print('[Debug] >>>> Successfully set weights in the GD object ')
         self.labelled_recordID_list = []
         return
 
