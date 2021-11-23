@@ -262,7 +262,7 @@ class onlineUpdateExecutor:
         ID_COL = self.ID_COL
         
         for dom in entity_list:
-            entity_id = self.data_handler_object.get_entity(self, recordID, dom)
+            entity_id = self.data_handler_object.get_entity(recordID, dom)
             self.data_handler_object.store_entityFlag(
                 domain=dom,
                 entity_id=entity_id,
