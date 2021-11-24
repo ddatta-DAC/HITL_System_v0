@@ -114,7 +114,7 @@ def __preload__(count=1000):
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
     samples = ad_result.rename(columns={'rank': 'score'})
-    samples = samples.sort_values(by='score', ascending=True)
+    samples = samples.sort_values(by='score', ascending=False)
     count = min(len(samples) // 3, count)
     df = samples.head(count).copy(deep=True)
     del df['score']
