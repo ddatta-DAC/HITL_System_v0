@@ -84,7 +84,7 @@ def initialize(
     Path(result_pkl_cacheDir).mkdir(exist_ok=True, parents=True)
     
     redis_obj.ingest_record_data(
-        DATA_LOC=DATA_LOC,
+        DATA_LOC = DATA_LOC,
         subDIR = subDIR
     )
     print('Ingesting into redis ...')
@@ -174,13 +174,17 @@ def fetchRecord_details(
 # data_dir ='./../generated_data_v1/us_import'
 # pairwise_data_dir = './../PairwiseComparison/pairWiseDist'
 # subDIR='01_2016'
-# initialize(data_dir, pairwise_data_dir, subDIR)
+# initialize(
+#   data_dir,
+#   pairwise_data_dir,
+#   subDIR,
+#   _anomaly_result_dir='./../AD_model/combined_output',
+#   _result_pkl_cacheDir = 'pkl_Cache',
+#   load_redis = False
+#  )
 #
 # r = fetchRecord_details(
-#     id = 121983692,
-#     subDIR='01_2016'
+#     record_id = 121983692,
 # )
-# setupGlobals(
-#   _DATA_LOC
-# )
+
 # print(r)
