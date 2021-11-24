@@ -83,20 +83,21 @@ def __preload__(count=1000):
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
     samples = ad_result.rename(columns={'rank': 'score'})
-    samples = samples.sort_values(by='score', ascending=True)
+    samples = samples.sort_values(by='score', ascending=False)
     count = min(len(samples) // 3, count)
     df = samples.head(count).copy(deep=True)
     del df['score']
     recordID_list = df[ID_col].astype(int).tolist()
-    
-
-    
+    # recordID_list = recordID_list[::-1]
+    print('>>>')
+    cpu_count = min(10, cpu_count)
     Parallel(n_jobs=cpu_count, prefer="threads")(
-        delayed(get_sankey_diagram)(int(id),1,) for id in tqdm(recordID_list)
+        delayed(get_sankey_diagram)(int(_id),2,) for _id in tqdm(recordID_list)
     )
     Parallel(n_jobs=cpu_count, prefer="threads")(
-        delayed(get_sankey_diagram)(int(id),2,) for id in tqdm(recordID_list)
+        delayed(get_sankey_diagram)(int(_id),1,) for _id in tqdm(recordID_list)
     )
+   
     return
 
 

@@ -73,18 +73,18 @@ def __preload__(count=1000):
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
     samples = ad_result.rename(columns={'rank': 'score'})
-    samples = samples.sort_values(by='score', ascending=True)
+    samples = samples.sort_values(by='score', ascending=False)
     count = min(len(samples) // 3, count)
     df = samples.head(count).copy(deep=True)
     del df['score']
     recordID_list = df[ID_col].astype(int).tolist()
     
-#     for id in tqdm(recordID_list):
-#         get_record_entityEmbeddings(int(id))
-    
-    Parallel(n_jobs=cpu_count, prefer="threads")(
-        delayed(get_record_entityEmbeddings)(int(id)) for id in tqdm(recordID_list)
-    )
+    for id in tqdm(recordID_list):
+        get_record_entityEmbeddings(int(id))
+#     cpu_count = min(10, cpu_count)
+#     Parallel(n_jobs=cpu_count, prefer="threads")(
+#         delayed(get_record_entityEmbeddings)(int(id)) for id in tqdm(recordID_list)
+#     )
     return  
     
 

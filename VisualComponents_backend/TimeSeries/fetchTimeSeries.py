@@ -65,12 +65,14 @@ def __preload__(count=1000):
         os.path.join(anomaly_result_dir, subDIR, 'AD_output.csv'), index_col=None
     )
     samples = ad_result.rename(columns={'rank': 'score'})
-    samples = samples.sort_values(by='score', ascending=True)
+    samples = samples.sort_values(by='score', ascending=False)
     count = min(len(samples) // 3, count)
     df = samples.head(count).copy(deep=True)
     del df['score']
     recordID_list = df[ID_col].astype(int).tolist()
-
+    cpu_count  = min(10,cpu_count)
+#     for id in tqdm(recordID_list):
+#         get_TimeSeries(int(id))
     Parallel(n_jobs=cpu_count, prefer="threads")(
         delayed(get_TimeSeries)(int(id)) for id in tqdm(recordID_list)
     )
@@ -91,6 +93,7 @@ return_type:
 '''
 
 def fetchTS(
+        PanjivaRecordID,
         domain='ConsigneePanjivaID',
         _id=None,
         dateColumn='ArrivalDate',
@@ -104,7 +107,7 @@ def fetchTS(
     global subDIR
     global html_saveDir, json_saveDir
     
-    signature = 'TimeSeries_{}_{}'.format(domain, _id)
+    signature = '{}_TimeSeries_{}'.format( PanjivaRecordID, domain)
     json_fpath = os.path.join(json_saveDir, signature + '.json')
     fig = None
     
@@ -192,7 +195,7 @@ def fetchTS(
 
 def get_TimeSeries(
     PanjivaRecordID,
-    return_type=3,
+    return_type=2,
     use_cache=True
 ):
     global SQL_conn
@@ -208,6 +211,7 @@ def get_TimeSeries(
     shipper = str(int(df['ShipperPanjivaID'].values[0]))
     
     value_1 = fetchTS(
+        PanjivaRecordID,
         domain='ConsigneePanjivaID',
         _id=consignee,
         title='Activity of Consignee',
@@ -216,6 +220,7 @@ def get_TimeSeries(
     )
     
     value_2 = fetchTS(
+        PanjivaRecordID,
         domain='ShipperPanjivaID',
         _id=shipper,
         title='Activity of Shipper',
