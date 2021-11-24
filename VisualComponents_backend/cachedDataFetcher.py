@@ -17,6 +17,7 @@ import multiprocessing as MP
 from joblib import Parallel, delayed
 
 
+
 class static_data_fetcher():
 
     def __init__(self, base_path = './'):
@@ -43,7 +44,6 @@ class static_data_fetcher():
             if figure_type == 'stackedComparison':
                 result[figure_type] = {}
                 _dir = os.path.join(_dir,  str(PanjivaRecordID) )
-                
                 files = glob(os.path.join(_dir,'**.html'))
                 for f in files:
                     domain = os.path.basename(f).split('.')[0].split('__')[-1]
@@ -61,36 +61,55 @@ class static_data_fetcher():
                     result[figure_type]['Sankey Diagram Type {}'.format(_type)] = fh.read()
                     fh.close()
             elif figure_type == 'EmbViz_all':
-                file = sorted(glob(os.path.join(_dir,'**_{}.html'.format(PanjivaRecordID))))[0]
-                fh = open(file, 'r')
-                result[figure_type] = fh.read()
-                fh.close()
+                try:
+                    file = sorted(glob(os.path.join(_dir,'**_{}.html'.format(PanjivaRecordID))))[0]
+                    fh = open(file, 'r')
+                    result[figure_type] = fh.read()
+                    fh.close()
+                except:
+                    result[figure_type] = None
             elif figure_type == 'companyNetworkViz':
-                file = sorted(glob(os.path.join(_dir,'**_{}_**.html'.format(PanjivaRecordID))))[0]
-                fh = open(file, 'r')
-                result[figure_type] = fh.read()
-                fh.close()
+                try:
+                    file = sorted(glob(os.path.join(_dir,'**_{}_**.html'.format(PanjivaRecordID))))[0]
+                    fh = open(file, 'r')
+                    result[figure_type] = fh.read()
+                    fh.close()
+                except:
+                    result[figure_type] = None
             elif figure_type == 'TimeSeries':
                 result[figure_type] = {}
-                file1 = sorted(glob(os.path.join(_dir,'{}**Consignee**.html'.format(PanjivaRecordID))))[0]
-                file2 = sorted(glob(os.path.join(_dir,'{}**Shipper**.html'.format(PanjivaRecordID))))[0]
-                fh = open(file1, 'r')
-                result[figure_type]['Consignee'] = fh.read()
-                fh.close()
-                fh = open(file2, 'r')
-                result[figure_type]['Shipper'] = fh.read()
-                fh.close()
+                try:
+                    file1 = sorted(glob(os.path.join(_dir,'{}**Consignee**.html'.format(PanjivaRecordID))))[0]
+                    file2 = sorted(glob(os.path.join(_dir,'{}**Shipper**.html'.format(PanjivaRecordID))))[0]
+                    fh = open(file1, 'r')
+                    result[figure_type]['Consignee'] = fh.read()
+                    fh.close()
+                    fh = open(file2, 'r')
+                    result[figure_type]['Shipper'] = fh.read()
+                    fh.close()
+                except:
+                    result[figure_type] = None
             elif figure_type == 'HSCodeViz':
                 result[figure_type] = {}
-                file1 = sorted(glob(os.path.join(_dir,'{}**Consignee**.html'.format(PanjivaRecordID))))[0]
-                file2 = sorted(glob(os.path.join(_dir,'{}**Shipper**.html'.format(PanjivaRecordID))))[0]
-                fh = open(file1, 'r')
-                result[figure_type]['Consignee'] = fh.read()
-                fh.close()
-                fh = open(file2, 'r')
-                result[figure_type]['Shipper'] = fh.read()
-                fh.close()
+                try:
+                    file1 = sorted(glob(os.path.join(_dir,'{}**Consignee**.html'.format(PanjivaRecordID))))[0]
+                    file2 = sorted(glob(os.path.join(_dir,'{}**Shipper**.html'.format(PanjivaRecordID))))[0]
+                    fh = open(file1, 'r')
+                    result[figure_type]['Consignee'] = fh.read()
+                    fh.close()
+                    fh = open(file2, 'r')
+                    result[figure_type]['Shipper'] = fh.read()
+                    fh.close()
+                except:
+                    result[figure_type] = None
         return result
+         
+'''
+# SAMPLE CALL
+'''
+
+# obj = static_data_fetcher(base_path='./')
+# result = obj.fetch_saved_html(120901356)
     
                     
         
