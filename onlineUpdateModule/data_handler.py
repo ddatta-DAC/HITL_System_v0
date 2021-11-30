@@ -157,7 +157,7 @@ class data_handler:
         entity_value = self.domain_id2value_dict[domain][entity_id]
         self.entity_dict[domain][entity_value] = label
         sql_query = """ INSERT OR IGNORE INTO {} ({},{})
-                      VALUES({} {}) """.format(domain, domain, 'label', entity_value, label)
+                      VALUES({},{}) """.format(domain, domain, 'label', entity_value, label)
         
         with self.sqllite_engine.connect() as connection:
             result = connection.execute(sql_query)
